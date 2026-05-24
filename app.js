@@ -87,7 +87,7 @@ function render() {
   if (S.filter !== 'all') rooms = rooms.filter(x => x.status === S.filter);
   if (S.role === 'maid') rooms = rooms.filter(x => !x.maidName || x.maidName === S.name);
   $('roomsGrid').innerHTML = rooms.map(x => {
-    return '<div class="room-card ' + x.status + '" onclick="openRoom('' + x.roomNo + '')">' +
+    return '<div class="room-card ' + x.status + '" onclick="openRoom(\'' + x.roomNo + '\')">' +
       '<div class="room-no">' + x.roomNo + '</div>' +
       '<div class="room-type">' + x.typeCode + '</div>' +
       '<div class="room-status status-' + x.status + '">' + (KR[x.status]||x.status) + '</div>' +
