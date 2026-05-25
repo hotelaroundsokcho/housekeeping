@@ -15,6 +15,12 @@ async function api(p){
   }catch(e){return{ok:false,error:String(e)};}
 }
 
+// SHA-256 해시 생성 (Web Crypto API)
+async function sha256(str){
+  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
 function switchTab(t){
   document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',(t==='admin')===(i===0)));
   $('adminForm').style.display=t==='admin'?'block':'none';
@@ -26,7 +32,8 @@ async function login(){
   const p=$('pinInput').value.trim();
   if(!p)return;
   showLoad('인증 중...');
-  const r=await api({action:'verifyPin',pin:p});
+  const hash=await sha256(p);
+  const r=await api({action:'verifyPin',pin:hash});
   hideLoad();
   if(r.ok){S.role='admin';S.name='관리자';go();}
   else $('loginError').textContent='PIN 오류';
@@ -50,6 +57,7 @@ async function go(){
   $('headerSub').textContent=S.role==='admin'?'관리자 모드':S.name+' 님';
   $('resetBtn').style.display=S.role==='admin'?'block':'none';
   $('maidSec').style.display=S.role==='admin'?'block':'none';
+  $('changePinBtn').style.display=S.role==='admin'?'block':'none';
   showLoad('로딩 중...');
   await loadRooms();
   hideLoad();
@@ -167,6 +175,37 @@ async function confirmReset(){
   catch(e){hideLoad();toast('실패');}
 }
 
+// ============================================================
+// PIN 변경 모달
+// ============================================================
+function openChangePinModal(){
+  $('cpCurrent').value='';$('cpNew').value='';$('cpConfirm').value='';$('cpError').textContent='';
+  $('changePinModal').classList.add('open');
+}
+
+function closeChangePinModal(e){
+  if(!e||e.target.id==='changePinModal')$('changePinModal').classList.remove('open');
+}
+
+async function savePin(){
+  const cur=$('cpCurrent').value.trim();
+  const nw=$('cpNew').value.trim();
+  const cf=$('cpConfirm').value.trim();
+  if(!cur||!nw||!cf){$('cpError').textContent='모든 항목을 입력하세요';return;}
+  if(nw.length<4||!/^\d+$/.test(nw)){$('cpError').textContent='새 PIN은 숫자 4자리 이상';return;}
+  if(nw!==cf){$('cpError').textContent='새 PIN이 일치하지 않습니다';return;}
+  showLoad('PIN 변경 중...');
+  const curHash=await sha256(cur);
+  const newHash=await sha256(nw);
+  const r=await api({action:'changePin',currentHash:curHash,newHash:newHash});
+  hideLoad();
+  if(r.ok){$('changePinModal').classList.remove('open');toast('✅ PIN 변경 완료');}
+  else $('cpError').textContent=r.error||'변경 실패';
+}
+
+// ============================================================
+// 채팅
+// ============================================================
 async function loadChat(silent=false){
   try{
     const r=await api({action:'getChat',since:S.chatSince});
