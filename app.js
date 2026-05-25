@@ -15,7 +15,6 @@ async function api(p){
   }catch(e){return{ok:false,error:String(e)};}
 }
 
-// SHA-256 해시 생성 (Web Crypto API)
 async function sha256(str){
   const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str));
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
@@ -39,10 +38,14 @@ async function login(){
   else $('loginError').textContent='PIN 오류';
 }
 
-function loginMaid(){
+async function loginMaid(){
   const n=$('maidNameInput').value.trim();
-  if(!n){$('loginError').textContent='이름 입력';return;}
-  S.role='maid';S.name=n;go();
+  if(!n){$('loginError').textContent='이름을 입력하세요';return;}
+  showLoad('인증 중...');
+  const r=await api({action:'verifyMaid',name:n});
+  hideLoad();
+  if(r.ok){S.role='maid';S.name=n;go();}
+  else $('loginError').textContent=r.error||'등록되지 않은 이름입니다';
 }
 
 function logout(){
@@ -175,9 +178,6 @@ async function confirmReset(){
   catch(e){hideLoad();toast('실패');}
 }
 
-// ============================================================
-// PIN 변경 모달
-// ============================================================
 function openChangePinModal(){
   $('cpCurrent').value='';$('cpNew').value='';$('cpConfirm').value='';$('cpError').textContent='';
   $('changePinModal').classList.add('open');
@@ -203,9 +203,6 @@ async function savePin(){
   else $('cpError').textContent=r.error||'변경 실패';
 }
 
-// ============================================================
-// 채팅
-// ============================================================
 async function loadChat(silent=false){
   try{
     const r=await api({action:'getChat',since:S.chatSince});
