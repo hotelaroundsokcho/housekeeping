@@ -58,7 +58,7 @@ async function go(){
     const tab=document.querySelector('.nav-tab.active');
     if(tab&&tab.textContent.includes('객실'))loadRooms(true);
     else loadChat(true);
-  },8000);
+  },15000);
 }
 
 async function loadRooms(silent=false){
