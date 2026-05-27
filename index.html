@@ -1,17 +1,9 @@
-<div class="filter-row"><head>
-.pin-error{color:var(--uncleaned);font-size:12px;text-align:center;margin-bottom:10px;min-height:16px;}
-<div class="maid-stats-section" id="maidStatsSection" style="display:none"><div class="maid-stats-title">👥 메이드별 현황</div>div><div class="maid-stats-grid" id="maidStatsGrid"></div>div></div>div><div class="filter-row">  .maid-stats-title{font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em;}
-  .maid-stats-grid{display:flex;flex-direction:column;gap:8px;}
-  .maid-stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;}
-  .maid-stat-name{font-size:13px;font-weight:600;margin-bottom:6px;}
-  .maid-stat-numbers{display:flex;gap:10px;align-items:center;margin-bottom:6px;}
-  .maid-stat-done{font-size:12px;color:var(--cleaned);font-weight:600;}
-  .maid-stat-wip{font-size:12px;color:var(--cleaning);font-weight:600;}
-  .maid-stat-total{font-size:11px;color:var(--text2);}
-  .maid-stat-bar-wrap{background:var(--surface2);border-radius:4px;height:5px;overflow:hidden;margin-bottom:4px;}
-  .maid-stat-bar{height:100%;background:var(--cleaned);border-radius:4px;transition:width .4s ease;}
-  .maid-stat-pct{font-size:10px;color:var(--text2);}<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>ê°ì¤ì ë¹ | Hotel Around Sokcho</title>
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>객실정비 | Hotel Around Sokcho</title>
 <style>
 :root{--bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2e3248;--accent:#6c8fff;--text:#e8eaf0;--text2:#8b91a8;--uncleaned:#ef4444;--cleaning:#f59e0b;--cleaned:#22c55e;--inspection:#a855f7;--radius:12px;}
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -104,7 +96,6 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 .loading-box p{margin-top:12px;font-size:13px;color:var(--text2);}
 .toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:10px 20px;border-radius:24px;font-size:13px;z-index:400;opacity:0;transition:opacity .3s;pointer-events:none;}
 .toast.show{opacity:1;}
-/* PIN ë³ê²½ ëª¨ë¬ */
 .pin-modal{background:var(--surface);border-radius:20px 20px 0 0;padding:24px 20px;width:100%;max-width:480px;}
 .pin-input{width:100%;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:16px;outline:none;margin-bottom:12px;}
 .pin-save-btn{width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;}
@@ -117,123 +108,136 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 .maid-add-input{flex:1;padding:11px 13px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;outline:none;}
 .maid-add-btn{padding:11px 16px;background:var(--cleaned);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;}
 .pin-error{color:var(--uncleaned);font-size:12px;text-align:center;margin-bottom:10px;min-height:16px;}
+.maid-stats-section{margin-bottom:14px;}
+.maid-stats-title{font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em;}
+.maid-stats-grid{display:flex;flex-direction:column;gap:8px;}
+.maid-stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;}
+.maid-stat-name{font-size:13px;font-weight:600;margin-bottom:6px;}
+.maid-stat-numbers{display:flex;gap:10px;align-items:center;margin-bottom:6px;}
+.maid-stat-done{font-size:12px;color:var(--cleaned);font-weight:600;}
+.maid-stat-wip{font-size:12px;color:var(--cleaning);font-weight:600;}
+.maid-stat-total{font-size:11px;color:var(--text2);}
+.maid-stat-bar-wrap{background:var(--surface2);border-radius:4px;height:5px;overflow:hidden;margin-bottom:4px;}
+.maid-stat-bar{height:100%;background:var(--cleaned);border-radius:4px;transition:width .4s ease;}
+.maid-stat-pct{font-size:10px;color:var(--text2);}
 </style>
 </head>
 <body>
 <div id="loginScreen">
-  <div class="logo"><h1>ð¨ Hotel Around Sokcho</h1><p>Housekeeping Management System</p></div>
-  <div class="login-card">
-    <div class="tab-row">
-      <button class="tab-btn active" onclick="switchTab('admin')">ê´ë¦¬ì Admin</button>
-      <button class="tab-btn" onclick="switchTab('maid')">ë©ì´ë Maid</button>
-    </div>
-    <div id="adminForm">
-      <div class="form-group"><label>PIN ë²í¸ (4ìë¦¬)</label>
-        <input type="password" id="pinInput" maxlength="6" inputmode="numeric" placeholder="â â â â" onkeydown="if(event.key==='Enter')login()">
-      </div>
-      <button class="btn-primary" onclick="login()">ë¡ê·¸ì¸</button>
-    </div>
-    <div id="maidForm" style="display:none">
-      <div class="form-group"><label>ì´ë¦ ìë ¥</label>
-        <input type="text" id="maidNameInput" placeholder="ì: ê¹ë¯¸ì" onkeydown="if(event.key==='Enter')loginMaid()">
-      </div>
-      <button class="btn-primary" onclick="loginMaid()">ìì¥íê¸°</button>
-    </div>
-    <div class="error-msg" id="loginError"></div>
-  </div>
+<div class="logo"><h1>🏨 Hotel Around Sokcho</h1><p>Housekeeping Management System</p></div>
+<div class="login-card">
+<div class="tab-row">
+<button class="tab-btn active" onclick="switchTab('admin')">관리자 Admin</button>
+<button class="tab-btn" onclick="switchTab('maid')">메이드 Maid</button>
+</div>
+<div id="adminForm">
+<div class="form-group"><label>PIN 번호 (4자리)</label>
+<input type="password" id="pinInput" maxlength="6" inputmode="numeric" placeholder="●  ●  ●  ●" onkeydown="if(event.key==='Enter')login()">
+</div>
+<button class="btn-primary" onclick="login()">로그인</button>
+</div>
+<div id="maidForm" style="display:none">
+<div class="form-group"><label>이름 입력</label>
+<input type="text" id="maidNameInput" placeholder="예: 김미소" onkeydown="if(event.key==='Enter')loginMaid()">
+</div>
+<button class="btn-primary" onclick="loginMaid()">입장하기</button>
+</div>
+<div class="error-msg" id="loginError"></div>
+</div>
 </div>
 <div id="app">
-  <div class="app-header">
-    <div><div class="app-title">ð¨ ê°ì¤ì ë¹ íí©</div><div class="sub" id="headerSub"></div></div>
-    <button class="logout-btn" onclick="logout()">ë¡ê·¸ìì</button>
-  </div>
-  <div class="nav-tabs">
-    <div class="nav-tab active" onclick="showTab('rooms')">ð  ê°ì¤íí©</div>
-    <div class="nav-tab" onclick="showTab('chat')">ð¬ ì±í</div>
-  </div>
-  <div id="tabRooms" class="content">
-    <div class="stats-row">
-      <div class="stat-card s-uncleaned"><div class="stat-num" id="cnt0">0</div><div class="stat-label">ë¯¸ì ë¹</div></div>
-      <div class="stat-card s-cleaning"><div class="stat-num" id="cnt1">0</div><div class="stat-label">ì ë¹ì¤</div></div>
-      <div class="stat-card s-cleaned"><div class="stat-num" id="cnt2">0</div><div class="stat-label">ìë£</div></div>
-      <div class="stat-card s-inspection"><div class="stat-num" id="cnt3">0</div><div class="stat-label">ì ê²íì</div></div>
-    </div>
-    <div class="filter-row">
-      <button class="filter-btn active" onclick="setFilter('all')">ì ì²´</button>
-      <button class="filter-btn" onclick="setFilter('uncleaned')">ë¯¸ì ë¹</button>
-      <button class="filter-btn" onclick="setFilter('cleaning')">ì ë¹ì¤</button>
-      <button class="filter-btn" onclick="setFilter('cleaned')">ìë£</button>
-      <button class="filter-btn" onclick="setFilter('inspection')">ì ê²íì</button>
-    </div>
-    <button class="reset-btn" id="resetBtn" style="display:none" onclick="confirmReset()">â ï¸ ì ì²´ ì´ê¸°í (ìë¬´ ìì)</button>
-    <button class="maid-mgmt-btn" id="maidMgmtBtn" style="display:none" onclick="openMaidMgmtModal()">ð¥ ë©ì´ë ëªë¨ ê´ë¦¬</button>
-    <button class="change-pin-btn" id="changePinBtn" style="display:none" onclick="openChangePinModal()">ð ê´ë¦¬ì PIN ë³ê²½</button>
-    <div class="rooms-grid" id="roomsGrid"></div>
-  </div>
-  <div id="tabChat" style="display:none">
-    <div class="chat-wrap">
-      <div class="chat-msgs" id="chatMsgs"></div>
-      <div class="chat-input-row">
-        <input type="text" id="chatInput" placeholder="ë©ìì§ ìë ¥..." onkeydown="if(event.key==='Enter')sendMsg()">
-        <button class="chat-send-btn" onclick="sendMsg()">ì ì¡</button>
-      </div>
-    </div>
-  </div>
+<div class="app-header">
+<div><div class="app-title">🏨 객실정비 현황</div><div class="sub" id="headerSub"></div></div>
+<button class="logout-btn" onclick="logout()">로그아웃</button>
 </div>
-<!-- ê°ì¤ ìì¸ ëª¨ë¬ -->
+<div class="nav-tabs">
+<div class="nav-tab active" onclick="showTab('rooms')">🏠 객실현황</div>
+<div class="nav-tab" onclick="showTab('chat')">💬 채팅</div>
+</div>
+<div id="tabRooms" class="content">
+<div class="stats-row">
+<div class="stat-card s-uncleaned"><div class="stat-num" id="cnt0">0</div><div class="stat-label">미정비</div></div>
+<div class="stat-card s-cleaning"><div class="stat-num" id="cnt1">0</div><div class="stat-label">정비중</div></div>
+<div class="stat-card s-cleaned"><div class="stat-num" id="cnt2">0</div><div class="stat-label">완료</div></div>
+<div class="stat-card s-inspection"><div class="stat-num" id="cnt3">0</div><div class="stat-label">점검필요</div></div>
+</div>
+<div class="maid-stats-section" id="maidStatsSection" style="display:none">
+  <div class="maid-stats-title">👥 메이드별 현황</div>
+  <div class="maid-stats-grid" id="maidStatsGrid"></div>
+</div>
+<div class="filter-row">
+<button class="filter-btn active" onclick="setFilter('all')">전체</button>
+<button class="filter-btn" onclick="setFilter('uncleaned')">미정비</button>
+<button class="filter-btn" onclick="setFilter('cleaning')">정비중</button>
+<button class="filter-btn" onclick="setFilter('cleaned')">완료</button>
+<button class="filter-btn" onclick="setFilter('inspection')">점검필요</button>
+</div>
+<button class="reset-btn" id="resetBtn" style="display:none" onclick="confirmReset()">⚠️ 전체 초기화 (업무 시작)</button>
+<button class="maid-mgmt-btn" id="maidMgmtBtn" style="display:none" onclick="openMaidMgmtModal()">👥 메이드 명단 관리</button>
+<button class="change-pin-btn" id="changePinBtn" style="display:none" onclick="openChangePinModal()">🔑 관리자 PIN 변경</button>
+<div class="rooms-grid" id="roomsGrid"></div>
+</div>
+<div id="tabChat" style="display:none">
+<div class="chat-wrap">
+<div class="chat-msgs" id="chatMsgs"></div>
+<div class="chat-input-row">
+<input type="text" id="chatInput" placeholder="메시지 입력..." onkeydown="if(event.key==='Enter')sendMsg()">
+<button class="chat-send-btn" onclick="sendMsg()">전송</button>
+</div>
+</div>
+</div>
+</div>
 <div class="modal-overlay" id="roomModal" onclick="closeModal(event)">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <h3 id="mRoomNo"></h3>
-    <div class="room-type-lg" id="mRoomType"></div>
-    <div class="modal-section"><label>ì ë¹ ìí ë³ê²½</label>
-      <div class="status-btns">
-        <button class="status-btn" onclick="selStatus('uncleaned')">ð´ ë¯¸ì ë¹<br><small>Uncleaned</small></button>
-        <button class="status-btn" onclick="selStatus('cleaning')">ð¡ ì ë¹ì¤<br><small>Cleaning</small></button>
-        <button class="status-btn" onclick="selStatus('cleaned')">ð¢ ì ë¹ìë£<br><small>Cleaned</small></button>
-        <button class="status-btn" onclick="selStatus('inspection')">ð£ ì ê²íì<br><small>Inspection</small></button>
-      </div>
-    </div>
-    <div class="modal-section" id="maidSec"><label>ë©ì´ë ë°°ì  (ê´ë¦¬ì)</label><input type="text" class="maid-input" id="maidInput" placeholder="ë©ì´ë ì´ë¦"></div>
-    <div class="modal-section"><label>ë©ëª¨ ì¶ê°</label><textarea class="note-input" id="noteInput" placeholder="í¹ì´ì¬í­..."></textarea></div>
-    <div class="modal-section"><label>ë©ëª¨ ì´ë ¥</label><div class="notes-list" id="notesList"></div></div>
-    <button class="modal-save-btn" onclick="saveRoom()">ì ì¥</button>
-  </div>
+<div class="modal">
+<div class="modal-handle"></div>
+<h3 id="mRoomNo"></h3>
+<div class="room-type-lg" id="mRoomType"></div>
+<div class="modal-section"><label>정비 상태 변경</label>
+<div class="status-btns">
+<button class="status-btn" onclick="selStatus('uncleaned')">🔴 미정비<br><small>Uncleaned</small></button>
+<button class="status-btn" onclick="selStatus('cleaning')">🟡 정비중<br><small>Cleaning</small></button>
+<button class="status-btn" onclick="selStatus('cleaned')">🟢 정비완료<br><small>Cleaned</small></button>
+<button class="status-btn" onclick="selStatus('inspection')">🟣 점검필요<br><small>Inspection</small></button>
 </div>
-<!-- ë©ì´ë ëªë¨ ê´ë¦¬ ëª¨ë¬ -->
+</div>
+<div class="modal-section" id="maidSec"><label>메이드 배정 (관리자)</label><input type="text" class="maid-input" id="maidInput" placeholder="메이드 이름"></div>
+<div class="modal-section"><label>메모 추가</label><textarea class="note-input" id="noteInput" placeholder="특이사항..."></textarea></div>
+<div class="modal-section"><label>메모 이력</label><div class="notes-list" id="notesList"></div></div>
+<button class="modal-save-btn" onclick="saveRoom()">저장</button>
+</div>
+</div>
 <div class="modal-overlay" id="maidMgmtModal" onclick="closeMaidMgmtModal(event)">
-  <div class="pin-modal">
-    <div class="modal-handle"></div>
-    <h3 style="margin-bottom:6px">ð¥ ë©ì´ë ëªë¨ ê´ë¦¬</h3>
-    <p style="font-size:11px;color:var(--text2);margin-bottom:18px">ë±ë¡ë ì´ë¦ë§ ë¡ê·¸ì¸ ê°ë¥í©ëë¤</p>
-    <div id="maidMgmtList"></div>
-    <div class="maid-add-row">
-      <input type="text" class="maid-add-input" id="newMaidInput" placeholder="ì ë©ì´ë ì´ë¦ ìë ¥" onkeydown="if(event.key==='Enter')addMaid()">
-      <button class="maid-add-btn" onclick="addMaid()">ì¶ê°</button>
-    </div>
-    <button class="pin-cancel-btn" style="margin-top:16px" onclick="closeMaidMgmtModal()">ë«ê¸°</button>
-  </div>
+<div class="pin-modal">
+<div class="modal-handle"></div>
+<h3 style="margin-bottom:6px">👥 메이드 명단 관리</h3>
+<p style="font-size:11px;color:var(--text2);margin-bottom:18px">등록된 이름만 로그인 가능합니다</p>
+<div id="maidMgmtList"></div>
+<div class="maid-add-row">
+<input type="text" class="maid-add-input" id="newMaidInput" placeholder="새 메이드 이름 입력" onkeydown="if(event.key==='Enter')addMaid()">
+<button class="maid-add-btn" onclick="addMaid()">추가</button>
 </div>
-<!-- PIN ë³ê²½ ëª¨ë¬ -->
+<button class="pin-cancel-btn" style="margin-top:16px" onclick="closeMaidMgmtModal()">닫기</button>
+</div>
+</div>
 <div class="modal-overlay" id="changePinModal" onclick="closeChangePinModal(event)">
-  <div class="pin-modal">
-    <div class="modal-handle"></div>
-    <h3 style="margin-bottom:20px">ð ê´ë¦¬ì PIN ë³ê²½</h3>
-    <div class="form-group"><label style="font-size:12px;color:var(--text2);display:block;margin-bottom:6px">íì¬ PIN</label>
-      <input type="password" class="pin-input" id="cpCurrent" inputmode="numeric" placeholder="íì¬ PIN ìë ¥">
-    </div>
-    <div class="form-group"><label style="font-size:12px;color:var(--text2);display:block;margin-bottom:6px">ì PIN (ì«ì 4ìë¦¬ ì´ì)</label>
-      <input type="password" class="pin-input" id="cpNew" inputmode="numeric" placeholder="ì PIN ìë ¥">
-    </div>
-    <div class="form-group"><label style="font-size:12px;color:var(--text2);display:block;margin-bottom:6px">ì PIN ìì¸</label>
-      <input type="password" class="pin-input" id="cpConfirm" inputmode="numeric" placeholder="ì PIN ì¬ìë ¥" onkeydown="if(event.key==='Enter')savePin()">
-    </div>
-    <div class="pin-error" id="cpError"></div>
-    <button class="pin-save-btn" onclick="savePin()">ë³ê²½íê¸°</button>
-    <button class="pin-cancel-btn" onclick="closeChangePinModal()">ì·¨ì</button>
-  </div>
+<div class="pin-modal">
+<div class="modal-handle"></div>
+<h3 style="margin-bottom:20px">🔑 관리자 PIN 변경</h3>
+<div class="form-group"><label style="font-size:12px;color:var(--text2);display:block;margin-bottom:6px">현재 PIN</label>
+<input type="password" class="pin-input" id="cpCurrent" inputmode="numeric" placeholder="현재 PIN 입력">
 </div>
-<div class="loading-overlay" id="loadingOv" style="display:none"><div class="loading-box"><div class="spinner"></div><p id="loadingMsg">ì²ë¦¬ ì¤...</p></div></div>
+<div class="form-group"><label style="font-size:12px;color:var(--text2);display:block;margin-bottom:6px">새 PIN (숫자 4자리 이상)</label>
+<input type="password" class="pin-input" id="cpNew" inputmode="numeric" placeholder="새 PIN 입력">
+</div>
+<div class="form-group"><label style="font-size:12px;color:var(--text2);display:block;margin-bottom:6px">새 PIN 확인</label>
+<input type="password" class="pin-input" id="cpConfirm" inputmode="numeric" placeholder="새 PIN 재입력" onkeydown="if(event.key==='Enter')savePin()">
+</div>
+<div class="pin-error" id="cpError"></div>
+<button class="pin-save-btn" onclick="savePin()">변경하기</button>
+<button class="pin-cancel-btn" onclick="closeChangePinModal()">취소</button>
+</div>
+</div>
+<div class="loading-overlay" id="loadingOv" style="display:none"><div class="loading-box"><div class="spinner"></div><p id="loadingMsg">처리 중...</p></div></div>
 <div class="toast" id="toast"></div>
 <script src="app.js"></script>
 </body>
