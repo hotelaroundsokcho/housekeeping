@@ -75,7 +75,11 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 .room-card.card-selected{border-color:var(--uncleaned);box-shadow:0 0 0 2px rgba(239,68,68,.3);}
 .card-check{font-size:18px;position:absolute;top:8px;right:10px;color:var(--uncleaned);}
 .room-no{font-size:20px;font-weight:700;}
-.room-type{font-size:10px;color:var(--text2);margin-top:2px;}
+.room-type-row{display:flex;align-items:center;gap:5px;margin-top:2px;}
+.room-type{font-size:10px;color:var(--text2);}
+.bed-badge{display:inline-block;padding:1px 6px;border-radius:4px;font-size:9px;font-weight:700;letter-spacing:.03em;line-height:1.6;}
+.bed-twin{background:rgba(168,85,247,.18);color:#c084fc;border:1px solid rgba(168,85,247,.35);}
+.bed-double{background:rgba(245,158,11,.15);color:#fbbf24;border:1px solid rgba(245,158,11,.35);}
 .room-status{display:inline-block;margin-top:8px;padding:3px 8px;border-radius:20px;font-size:10px;font-weight:600;}
 .status-occupied{background:rgba(59,130,246,.15);color:var(--occupied);}
 .status-uncleaned{background:rgba(239,68,68,.15);color:var(--uncleaned);}
@@ -145,7 +149,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 </div>
 <div id="adminForm">
 <div class="form-group"><label>PIN 번호</label>
-<input type="password" id="pinInput" maxlength="8" inputmode="numeric" placeholder="●  ●  ●  ●" onkeydown="if(event.key==='Enter')login()">
+<input type="password" id="pinInput" maxlength="8" inputmode="numeric" placeholder="● ● ● ●" onkeydown="if(event.key==='Enter')login()">
 </div>
 <button class="btn-primary" onclick="login()">로그인</button>
 </div>
@@ -169,25 +173,25 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 </div>
 <div id="tabRooms" class="content">
 <div class="stats-row-top">
-<div class="stat-card s-occupied"><div class="stat-num" id="cnt0">0</div><div class="stat-label">🔵 재실</div></div>
-<div class="stat-card s-uncleaned"><div class="stat-num" id="cnt1">0</div><div class="stat-label">🔴 미정비</div></div>
+<div class="stat-card s-occupied"><div class="stat-num" id="cnt0">0</div><div class="stat-label">🔵 재실 / Occupied</div></div>
+<div class="stat-card s-uncleaned"><div class="stat-num" id="cnt1">0</div><div class="stat-label">🔴 미정비 / Uncleaned</div></div>
 </div>
 <div class="stats-row">
-<div class="stat-card s-cleaning"><div class="stat-num" id="cnt2">0</div><div class="stat-label">🟡 정비중</div></div>
-<div class="stat-card s-inspection"><div class="stat-num" id="cnt3">0</div><div class="stat-label">🟣 점검필요</div></div>
-<div class="stat-card s-vacant"><div class="stat-num" id="cnt4">0</div><div class="stat-label">🩵 공실완료</div></div>
+<div class="stat-card s-cleaning"><div class="stat-num" id="cnt2">0</div><div class="stat-label">🟡 정비중 / Cleaning</div></div>
+<div class="stat-card s-inspection"><div class="stat-num" id="cnt3">0</div><div class="stat-label">🟣 인스펙션필요 / Inspection</div></div>
+<div class="stat-card s-vacant"><div class="stat-num" id="cnt4">0</div><div class="stat-label">💙 공실완료 / Vacant</div></div>
 </div>
 <div class="maid-stats-section" id="maidStatsSection" style="display:none">
 <div class="maid-stats-title">👥 메이드별 현황</div>
 <div class="maid-stats-grid" id="maidStatsGrid"></div>
 </div>
 <div class="filter-row">
-<button class="filter-btn active" data-filter="all" onclick="setFilter('all')">전체</button>
-<button class="filter-btn" data-filter="occupied" onclick="setFilter('occupied')">🔵 재실</button>
-<button class="filter-btn" data-filter="uncleaned" onclick="setFilter('uncleaned')">🔴 미정비</button>
-<button class="filter-btn" data-filter="cleaning" onclick="setFilter('cleaning')">🟡 정비중</button>
-<button class="filter-btn" data-filter="inspection" onclick="setFilter('inspection')">🟣 점검필요</button>
-<button class="filter-btn" data-filter="vacant" onclick="setFilter('vacant')">🩵 공실완료</button>
+<button class="filter-btn active" data-filter="all" onclick="setFilter('all')">전체 / All</button>
+<button class="filter-btn" data-filter="occupied" onclick="setFilter('occupied')">🔵 재실 / Occupied</button>
+<button class="filter-btn" data-filter="uncleaned" onclick="setFilter('uncleaned')">🔴 미정비 / Uncleaned</button>
+<button class="filter-btn" data-filter="cleaning" onclick="setFilter('cleaning')">🟡 정비중 / Cleaning</button>
+<button class="filter-btn" data-filter="inspection" onclick="setFilter('inspection')">🟣 인스펙션 / Inspection</button>
+<button class="filter-btn" data-filter="vacant" onclick="setFilter('vacant')">💙 공실완료 / Vacant</button>
 </div>
 <button class="select-mode-btn" id="selectModeBtn" style="display:none" onclick="toggleSelectMode()">☑ 객실 선택 (일괄 체크아웃)</button>
 <button class="reset-btn" id="resetBtn" style="display:none" onclick="confirmReset()">⚠️ 전체 초기화 (긴급용)</button>
@@ -214,15 +218,15 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 <div class="modal-handle"></div>
 <h3 id="mRoomNo"></h3>
 <div class="room-type-lg" id="mRoomType"></div>
-<div class="modal-section"><label>상태 변경</label>
+<div class="modal-section"><label>상태 변경 / Change Status</label>
 <div class="status-btns-top">
 <button class="status-btn status-btn-admin" onclick="selStatus('occupied')">🔵 재실<br><small>Occupied</small></button>
 <button class="status-btn status-btn-admin" onclick="selStatus('uncleaned')">🔴 미정비<br><small>Uncleaned</small></button>
 </div>
 <div class="status-btns-bottom">
 <button class="status-btn" onclick="selStatus('cleaning')">🟡 정비중<br><small>Cleaning</small></button>
-<button class="status-btn" onclick="selStatus('inspection')">🟣 점검필요<br><small>Inspection</small></button>
-<button class="status-btn status-btn-admin" onclick="selStatus('vacant')">🩵 공실완료<br><small>Vacant</small></button>
+<button class="status-btn" onclick="selStatus('inspection')">🟣 인스펙션필요<br><small>Inspection</small></button>
+<button class="status-btn status-btn-admin" onclick="selStatus('vacant')">💙 공실완료<br><small>Vacant</small></button>
 </div>
 </div>
 <div class="modal-section" id="maidSec"><label>메이드 배정 (관리자)</label><input type="text" class="maid-input" id="maidInput" placeholder="메이드 이름"></div>
