@@ -7,11 +7,30 @@ let S = {
 let timer = null;
 const $ = id => document.getElementById(id);
 
+// 한글 + 영어 병기 / 점검필요 → 인스펙션필요
 const KR = {
-  occupied:'재실', uncleaned:'미정비', cleaning:'정비중',
-  inspection:'점검필요', vacant:'공실완료',
-  cleaned:'점검필요'
+  occupied:'재실 / Occupied',
+  uncleaned:'미정비 / Uncleaned',
+  cleaning:'정비중 / Cleaning',
+  inspection:'인스펙션필요 / Inspection',
+  vacant:'공실완료 / Vacant',
+  cleaned:'인스펙션필요 / Inspection'
 };
+
+// 채팅 자동발송용 한글 전용 라벨 (KR과 별도)
+const KR_CHAT = {
+  occupied:'재실', uncleaned:'미정비', cleaning:'정비중',
+  inspection:'인스펙션필요', vacant:'공실완료'
+};
+
+// 타입코드 세 번째 글자 → 침대타입 배지
+function bedBadge(typeCode) {
+  if (!typeCode || typeCode.length < 3) return '';
+  const c = typeCode[2].toUpperCase();
+  if (c === 'T') return '<span class="bed-badge bed-twin">Twin</span>';
+  if (c === 'D') return '<span class="bed-badge bed-double">Double</span>';
+  return '';
+}
 
 function showLoad(m){$('loadingOv').style.display='flex';$('loadingMsg').textContent=m||'처리 중...';}
 function hideLoad(){$('loadingOv').style.display='none';}
@@ -164,7 +183,8 @@ function updateBulkBar(){
 
 async function bulkCheckout(){
   const cnt=S.selected.size;if(!cnt)return;
-  if(!confirm(cnt+'개 객실을 미정비(체크아웃)로 등록합니다.\n계속하시겠습니까?'))return;
+  if(!confirm(cnt+'개 객실을 미정비(체크아웃)로 등록합니다.
+계속하시겠습니까?'))return;
   toggleSelectMode();
   showLoad('0 / '+cnt+' 처리 중...');
   const rooms=[...S.selected];let done=0;
@@ -196,16 +216,17 @@ function render(){
     const isSel=S.selected.has(no);
     const card=document.createElement('div');
     card.className='room-card '+room.status+(isSel?' card-selected':'');
+    const badge=bedBadge(room.typeCode);
     if(S.selectMode&&S.role==='admin'){
       card.innerHTML='<div class="card-check">'+(isSel?'☑':'☐')+'</div>'+
         '<div class="room-no">'+no+'</div>'+
-        '<div class="room-type">'+room.typeCode+'</div>'+
+        '<div class="room-type-row"><span class="room-type">'+room.typeCode+'</span>'+badge+'</div>'+
         '<div class="room-status status-'+room.status+'">'+KR[room.status]+'</div>'+
         (room.maidName?'<div class="room-maid">👤 '+room.maidName+'</div>':'');
       card.onclick=function(){toggleSelect(no);};
     }else{
       card.innerHTML='<div class="room-no">'+no+'</div>'+
-        '<div class="room-type">'+room.typeCode+'</div>'+
+        '<div class="room-type-row"><span class="room-type">'+room.typeCode+'</span>'+badge+'</div>'+
         '<div class="room-status status-'+room.status+'">'+KR[room.status]+'</div>'+
         (room.maidName?'<div class="room-maid">👤 '+room.maidName+'</div>':'');
       card.onclick=function(){openRoom(no);};
@@ -248,7 +269,7 @@ function selStatus(s){S.status=s;updBtns();}
 
 function updBtns(){
   const map={occupied:0,uncleaned:1,cleaning:2,inspection:3,vacant:4};
-  document.querySelectorAll('.status-btn').forEach(b=>b.className=b.className.replace(/\bsel-\S+/g,'').trim());
+  document.querySelectorAll('.status-btn').forEach(b=>b.className=b.className.replace(/sel-S+/g,'').trim());
   if(S.status&&map[S.status]!==undefined){
     const btns=document.querySelectorAll('.status-btn');
     if(btns[map[S.status]])btns[map[S.status]].classList.add('sel-'+S.status);
@@ -280,7 +301,9 @@ async function saveRoom(){
 }
 
 async function confirmReset(){
-  if(!confirm('⚠️ 전체 객실을 미정비로 초기화합니다.\n재실·공실완료 포함 모든 상태가 초기화됩니다.\n정말 계속하시겠습니까?'))return;
+  if(!confirm('⚠️ 전체 객실을 미정비로 초기화합니다.
+재실·공실완료 포함 모든 상태가 초기화됩니다.
+정말 계속하시겠습니까?'))return;
   if(!confirm('🔴 재확인: 정말로 전체 초기화하시겠습니까?'))return;
   showLoad('초기화...');
   try{await api({action:'resetRooms'});await loadRooms(true);hideLoad();toast('✅ 초기화완료');}
@@ -294,7 +317,7 @@ async function removeMaid(name){if(!confirm(name+' 님을 명단에서 삭제하
 function closeMaidMgmtModal(e){if(!e||e.target.id==='maidMgmtModal')$('maidMgmtModal').classList.remove('open');}
 function openChangePinModal(){$('cpCurrent').value='';$('cpNew').value='';$('cpConfirm').value='';$('cpError').textContent='';$('changePinModal').classList.add('open');}
 function closeChangePinModal(e){if(!e||e.target.id==='changePinModal')$('changePinModal').classList.remove('open');}
-async function savePin(){const cur=$('cpCurrent').value.trim(),nw=$('cpNew').value.trim(),cf=$('cpConfirm').value.trim();if(!cur||!nw||!cf){$('cpError').textContent='모든 항목을 입력하세요';return;}if(nw.length<4||!/^\d+$/.test(nw)){$('cpError').textContent='새 PIN은 숫자 4자리 이상';return;}if(nw!==cf){$('cpError').textContent='새 PIN이 일치하지 않습니다';return;}showLoad('PIN 변경 중...');const curHash=await sha256(cur),newHash=await sha256(nw);const r=await api({action:'changePin',currentHash:curHash,newHash:newHash});hideLoad();if(r.ok){$('changePinModal').classList.remove('open');toast('✅ PIN 변경 완료');}else $('cpError').textContent=r.error||'변경 실패';}
+async function savePin(){const cur=$('cpCurrent').value.trim(),nw=$('cpNew').value.trim(),cf=$('cpConfirm').value.trim();if(!cur||!nw||!cf){$('cpError').textContent='모든 항목을 입력하세요';return;}if(nw.length<4||!/^d+$/.test(nw)){$('cpError').textContent='새 PIN은 숫자 4자리 이상';return;}if(nw!==cf){$('cpError').textContent='새 PIN이 일치하지 않습니다';return;}showLoad('PIN 변경 중...');const curHash=await sha256(cur),newHash=await sha256(nw);const r=await api({action:'changePin',currentHash:curHash,newHash:newHash});hideLoad();if(r.ok){$('changePinModal').classList.remove('open');toast('✅ PIN 변경 완료');}else $('cpError').textContent=r.error||'변경 실패';}
 
 async function loadChat(silent=false){
   try{
