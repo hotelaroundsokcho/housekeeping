@@ -14,13 +14,14 @@ const KR = {
   cleaning:'정비중 / Cleaning',
   inspection:'인스펙션필요 / Inspection',
   vacant:'공실완료 / Vacant',
-  cleaned:'인스펙션필요 / Inspection'
+  ,
+  broken:'고장 / Broken'cleaned:'인스펙션필요 / Inspection'
 };
 
 // 채팅 자동발송용 한글 전용 라벨 (KR과 별도)
 const KR_CHAT = {
   occupied:'재실', uncleaned:'미정비', cleaning:'정비중',
-  inspection:'인스펙션필요', vacant:'공실완료'
+  inspection:'인스펙션필요', vacant:'공실완료', broken:'고장'
 };
 
 // 타입코드 세 번째 글자 → 침대타입 배지
@@ -112,12 +113,12 @@ async function loadRooms(silent=false){
 }
 
 function stats(){
-  const c={occupied:0,uncleaned:0,cleaning:0,inspection:0,vacant:0};
+  const c={occupied:0,uncleaned:0,cleaning:0,inspection:0,vacant:0,broken:0};
   S.rooms.forEach(r=>{
     const st=r.status==='cleaned'?'inspection':r.status;
     if(c[st]!==undefined)c[st]++;
   });
-  ['occupied','uncleaned','cleaning','inspection','vacant'].forEach((k,i)=>$('cnt'+i).textContent=c[k]);
+  ['occupied','uncleaned','cleaning','inspection','vacant','broken'].forEach((k,i)=>$('cnt'+i).textContent=c[k]);
 }
 
 function maidStats(){
@@ -206,7 +207,7 @@ function render(){
   let rooms=S.rooms.map(r=>r.status==='cleaned'?{...r,status:'inspection'}:r);
   if(S.filter!=='all')rooms=rooms.filter(x=>x.status===S.filter);
   if(S.role==='maid'){
-    rooms=rooms.filter(x=>x.status!=='occupied'&&x.status!=='vacant');
+    rooms=rooms.filter(x=>x.status!=='occupied'&&x.status!=='vacant'&&x.status!=='broken');
     rooms=rooms.filter(x=>!x.maidName||x.maidName===S.name);
   }
   const grid=$('roomsGrid');grid.innerHTML='';
@@ -267,7 +268,7 @@ function closeModal(e){if(e.target.id==='roomModal'){$('roomModal').classList.re
 function selStatus(s){S.status=s;updBtns();}
 
 function updBtns(){
-  const map={occupied:0,uncleaned:1,cleaning:2,inspection:3,vacant:4};
+  const map={occupied:0,uncleaned:1,cleaning:2,inspection:3,vacant:4,broken:5};
   document.querySelectorAll('.status-btn').forEach(b=>b.className=b.className.replace(/\bsel-\S+/g,'').trim());
   if(S.status&&map[S.status]!==undefined){
     const btns=document.querySelectorAll('.status-btn');
