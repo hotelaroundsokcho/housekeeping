@@ -268,7 +268,7 @@ function closeModal(e){if(e.target.id==='roomModal'){$('roomModal').classList.re
 function selStatus(s){S.status=s;updBtns();}
 
 function updBtns(){
-  const map={occupied:0,uncleaned:1,cleaning:2,inspection:3,vacant:4,broken:5};
+  const map={occupied:0,uncleaned:1,broken:2,cleaning:3,inspection:4,vacant:5};
   document.querySelectorAll('.status-btn').forEach(b=>b.className=b.className.replace(/\bsel-\S+/g,'').trim());
   if(S.status&&map[S.status]!==undefined){
     const btns=document.querySelectorAll('.status-btn');
