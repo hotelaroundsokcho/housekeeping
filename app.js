@@ -183,8 +183,7 @@ function updateBulkBar(){
 
 async function bulkCheckout(){
   const cnt=S.selected.size;if(!cnt)return;
-  if(!confirm(cnt+'개 객실을 미정비(체크아웃)로 등록합니다.
-계속하시겠습니까?'))return;
+  if(!confirm(cnt+'개 객실을 미정비(체크아웃)로 등록합니다.\n계속하시겠습니까?'))return;
   toggleSelectMode();
   showLoad('0 / '+cnt+' 처리 중...');
   const rooms=[...S.selected];let done=0;
@@ -269,7 +268,7 @@ function selStatus(s){S.status=s;updBtns();}
 
 function updBtns(){
   const map={occupied:0,uncleaned:1,cleaning:2,inspection:3,vacant:4};
-  document.querySelectorAll('.status-btn').forEach(b=>b.className=b.className.replace(/sel-S+/g,'').trim());
+  document.querySelectorAll('.status-btn').forEach(b=>b.className=b.className.replace(/\bsel-\S+/g,'').trim());
   if(S.status&&map[S.status]!==undefined){
     const btns=document.querySelectorAll('.status-btn');
     if(btns[map[S.status]])btns[map[S.status]].classList.add('sel-'+S.status);
@@ -301,9 +300,7 @@ async function saveRoom(){
 }
 
 async function confirmReset(){
-  if(!confirm('⚠️ 전체 객실을 미정비로 초기화합니다.
-재실·공실완료 포함 모든 상태가 초기화됩니다.
-정말 계속하시겠습니까?'))return;
+  if(!confirm('⚠️ 전체 객실을 미정비로 초기화합니다.\n재실·공실완료 포함 모든 상태가 초기화됩니다.\n정말 계속하시겠습니까?'))return;
   if(!confirm('🔴 재확인: 정말로 전체 초기화하시겠습니까?'))return;
   showLoad('초기화...');
   try{await api({action:'resetRooms'});await loadRooms(true);hideLoad();toast('✅ 초기화완료');}
@@ -317,7 +314,7 @@ async function removeMaid(name){if(!confirm(name+' 님을 명단에서 삭제하
 function closeMaidMgmtModal(e){if(!e||e.target.id==='maidMgmtModal')$('maidMgmtModal').classList.remove('open');}
 function openChangePinModal(){$('cpCurrent').value='';$('cpNew').value='';$('cpConfirm').value='';$('cpError').textContent='';$('changePinModal').classList.add('open');}
 function closeChangePinModal(e){if(!e||e.target.id==='changePinModal')$('changePinModal').classList.remove('open');}
-async function savePin(){const cur=$('cpCurrent').value.trim(),nw=$('cpNew').value.trim(),cf=$('cpConfirm').value.trim();if(!cur||!nw||!cf){$('cpError').textContent='모든 항목을 입력하세요';return;}if(nw.length<4||!/^d+$/.test(nw)){$('cpError').textContent='새 PIN은 숫자 4자리 이상';return;}if(nw!==cf){$('cpError').textContent='새 PIN이 일치하지 않습니다';return;}showLoad('PIN 변경 중...');const curHash=await sha256(cur),newHash=await sha256(nw);const r=await api({action:'changePin',currentHash:curHash,newHash:newHash});hideLoad();if(r.ok){$('changePinModal').classList.remove('open');toast('✅ PIN 변경 완료');}else $('cpError').textContent=r.error||'변경 실패';}
+async function savePin(){const cur=$('cpCurrent').value.trim(),nw=$('cpNew').value.trim(),cf=$('cpConfirm').value.trim();if(!cur||!nw||!cf){$('cpError').textContent='모든 항목을 입력하세요';return;}if(nw.length<4||!/^\d+$/.test(nw)){$('cpError').textContent='새 PIN은 숫자 4자리 이상';return;}if(nw!==cf){$('cpError').textContent='새 PIN이 일치하지 않습니다';return;}showLoad('PIN 변경 중...');const curHash=await sha256(cur),newHash=await sha256(nw);const r=await api({action:'changePin',currentHash:curHash,newHash:newHash});hideLoad();if(r.ok){$('changePinModal').classList.remove('open');toast('✅ PIN 변경 완료');}else $('cpError').textContent=r.error||'변경 실패';}
 
 async function loadChat(silent=false){
   try{
