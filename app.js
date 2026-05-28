@@ -15,7 +15,8 @@ const KR = {
   inspection:'인스펙션필요 / Inspection',
   vacant:'공실완료 / Vacant',
   ,
-  broken:'고장 / Broken'cleaned:'인스펙션필요 / Inspection'
+  broken:'고장 / Broken',
+  cleaned:'인스펙션필요 / Inspection'
 };
 
 // 채팅 자동발송용 한글 전용 라벨 (KR과 별도)
