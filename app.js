@@ -1,12 +1,21 @@
 const API = 'https://script.google.com/macros/s/AKfycbzEZj1UW3bejogNEuqmThCZNPlFdqXhq2zmlHI-D8cFgLFszs9G3Zcb4EFau1NyJl6D/exec';
-let S = {role:null,name:'',rooms:[],filter:'all',room:null,status:null,chatSince:null};
+let S = {
+  role:null, name:'', rooms:[], filter:'all',
+  room:null, status:null, chatSince:null,
+  selectMode:false, selected:new Set()
+};
 let timer = null;
 const $ = id => document.getElementById(id);
-const KR = {occupied:'재실',uncleaned:'미정비',cleaning:'정비중',cleaned:'정비완료',inspection:'점검필요',vacant:'공실완료'};
+
+const KR = {
+  occupied:'재실', uncleaned:'미정비', cleaning:'정비중',
+  inspection:'점검필요', vacant:'공실완료',
+  cleaned:'점검필요'
+};
 
 function showLoad(m){$('loadingOv').style.display='flex';$('loadingMsg').textContent=m||'처리 중...';}
 function hideLoad(){$('loadingOv').style.display='none';}
-function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
 
 async function api(p){
   try{
@@ -53,7 +62,7 @@ function logout(){
   sessionStorage.removeItem('hk_role');
   sessionStorage.removeItem('hk_name');
   switchTab('admin');
-  S={role:null,name:'',rooms:[],filter:'all',room:null,status:null,chatSince:null};
+  S={role:null,name:'',rooms:[],filter:'all',room:null,status:null,chatSince:null,selectMode:false,selected:new Set()};
   $('loginScreen').style.display='flex';$('app').style.display='none';
   $('pinInput').value='';$('maidNameInput').value='';
 }
@@ -61,11 +70,9 @@ function logout(){
 async function go(){
   $('loginScreen').style.display='none';$('app').style.display='flex';
   $('headerSub').textContent=S.role==='admin'?'관리자 모드':S.name+' 님';
-  $('resetBtn').style.display=S.role==='admin'?'block':'none';
-  $('maidSec').style.display=S.role==='admin'?'block':'none';
-  $('changePinBtn').style.display=S.role==='admin'?'block':'none';
-  $('maidMgmtBtn').style.display=S.role==='admin'?'block':'none';
-  $('maidStatsSection').style.display=S.role==='admin'?'block':'none';
+  ['resetBtn','maidSec','changePinBtn','maidMgmtBtn','maidStatsSection','selectModeBtn'].forEach(id=>{
+    const el=$(id);if(el)el.style.display=S.role==='admin'?'block':'none';
+  });
   showLoad('로딩 중...');
   await loadRooms();
   hideLoad();
@@ -86,23 +93,25 @@ async function loadRooms(silent=false){
 }
 
 function stats(){
-  const c={occupied:0,uncleaned:0,cleaning:0,cleaned:0,inspection:0,vacant:0};
-  S.rooms.forEach(r=>{if(c[r.status]!==undefined)c[r.status]++;});
-  ['occupied','uncleaned','cleaning','cleaned','inspection','vacant'].forEach((k,i)=>$('cnt'+i).textContent=c[k]);
+  const c={occupied:0,uncleaned:0,cleaning:0,inspection:0,vacant:0};
+  S.rooms.forEach(r=>{
+    const st=r.status==='cleaned'?'inspection':r.status;
+    if(c[st]!==undefined)c[st]++;
+  });
+  ['occupied','uncleaned','cleaning','inspection','vacant'].forEach((k,i)=>$('cnt'+i).textContent=c[k]);
 }
 
 function maidStats(){
   if(S.role!=='admin')return;
-  const box=$('maidStatsGrid');
-  if(!box)return;
+  const box=$('maidStatsGrid');if(!box)return;
   const tally={};
   S.rooms.forEach(r=>{
     if(!r.maidName)return;
-    if(!tally[r.maidName])tally[r.maidName]={cleaned:0,cleaning:0,total:0};
-    if(['uncleaned','cleaning','cleaned','inspection'].includes(r.status)){
+    if(!tally[r.maidName])tally[r.maidName]={done:0,wip:0,total:0};
+    if(['uncleaned','cleaning','inspection','vacant','cleaned'].includes(r.status)){
       tally[r.maidName].total++;
-      if(r.status==='cleaned'||r.status==='vacant')tally[r.maidName].cleaned++;
-      if(r.status==='cleaning')tally[r.maidName].cleaning++;
+      if(r.status==='inspection'||r.status==='vacant'||r.status==='cleaned')tally[r.maidName].done++;
+      if(r.status==='cleaning')tally[r.maidName].wip++;
     }
   });
   const names=Object.keys(tally);
@@ -110,52 +119,107 @@ function maidStats(){
   box.innerHTML='';
   names.forEach(function(name){
     const d=tally[name];
-    const pct=d.total?Math.round(d.cleaned/d.total*100):0;
-    const card=document.createElement('div');
-    card.className='maid-stat-card';
+    const pct=d.total?Math.round(d.done/d.total*100):0;
+    const card=document.createElement('div');card.className='maid-stat-card';
     card.innerHTML='<div class="maid-stat-name">👤 '+esc(name)+'</div>'+
-      '<div class="maid-stat-numbers"><span class="maid-stat-done">✅ '+d.cleaned+'</span><span class="maid-stat-wip">🔄 '+d.cleaning+'</span><span class="maid-stat-total">/ '+d.total+'객실</span></div>'+
+      '<div class="maid-stat-numbers"><span class="maid-stat-done">✅ '+d.done+'</span><span class="maid-stat-wip">🔄 '+d.wip+'</span><span class="maid-stat-total">/ '+d.total+'객실</span></div>'+
       '<div class="maid-stat-bar-wrap"><div class="maid-stat-bar" style="width:'+pct+'%"></div></div>'+
       '<div class="maid-stat-pct">'+pct+'% 완료</div>';
     box.appendChild(card);
   });
 }
 
+function toggleSelectMode(){
+  S.selectMode=!S.selectMode;
+  S.selected=new Set();
+  const btn=$('selectModeBtn');
+  if(S.selectMode){
+    btn.textContent='✖ 선택 취소';
+    btn.style.background='rgba(245,158,11,.15)';
+    btn.style.borderColor='rgba(245,158,11,.4)';
+    btn.style.color='var(--cleaning)';
+    $('bulkBar').style.display='flex';
+  }else{
+    btn.textContent='☑ 객실 선택 (일괄 체크아웃)';
+    btn.style.background='rgba(59,130,246,.1)';
+    btn.style.borderColor='rgba(59,130,246,.3)';
+    btn.style.color='var(--occupied)';
+    $('bulkBar').style.display='none';
+  }
+  updateBulkBar();render();
+}
+
+function toggleSelect(no){
+  if(S.selected.has(no))S.selected.delete(no);
+  else S.selected.add(no);
+  updateBulkBar();render();
+}
+
+function updateBulkBar(){
+  const cnt=S.selected.size;
+  $('bulkCount').textContent=cnt+'개 선택됨';
+  $('bulkBtn').disabled=cnt===0;
+  $('bulkBtn').style.opacity=cnt===0?'0.4':'1';
+}
+
+async function bulkCheckout(){
+  const cnt=S.selected.size;if(!cnt)return;
+  if(!confirm(cnt+'개 객실을 미정비(체크아웃)로 등록합니다.\n계속하시겠습니까?'))return;
+  toggleSelectMode();
+  showLoad('0 / '+cnt+' 처리 중...');
+  const rooms=[...S.selected];let done=0;
+  for(const roomNo of rooms){
+    await api({action:'updateRoom',roomNo,status:'uncleaned',updaterName:S.name,updaterRole:S.role});
+    done++;
+    $('loadingMsg').textContent=done+' / '+cnt+' 처리 중...';
+  }
+  await loadRooms(true);hideLoad();
+  toast('✅ '+cnt+'개 객실 미정비 등록 완료');
+}
+
 function setFilter(f){
   S.filter=f;
-  document.querySelectorAll('.filter-btn').forEach(b=>{
-    b.classList.toggle('active',b.dataset.filter===f);
-  });
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.toggle('active',b.dataset.filter===f));
   render();
 }
 
 function render(){
-  let rooms=S.rooms;
+  let rooms=S.rooms.map(r=>r.status==='cleaned'?{...r,status:'inspection'}:r);
   if(S.filter!=='all')rooms=rooms.filter(x=>x.status===S.filter);
   if(S.role==='maid'){
     rooms=rooms.filter(x=>x.status!=='occupied'&&x.status!=='vacant');
     rooms=rooms.filter(x=>!x.maidName||x.maidName===S.name);
   }
-  const grid=$('roomsGrid');
-  grid.innerHTML='';
+  const grid=$('roomsGrid');grid.innerHTML='';
   rooms.forEach(function(room){
     const no=String(room.roomNo);
+    const isSel=S.selected.has(no);
     const card=document.createElement('div');
-    card.className='room-card '+room.status;
-    card.innerHTML=
-      '<div class="room-no">'+no+'</div>'+
-      '<div class="room-type">'+room.typeCode+'</div>'+
-      '<div class="room-status status-'+room.status+'">'+KR[room.status]+'</div>'+
-      (room.maidName?'<div class="room-maid">👤 '+room.maidName+'</div>':'');
-    card.onclick=function(){openRoom(no);};
+    card.className='room-card '+room.status+(isSel?' card-selected':'');
+    if(S.selectMode&&S.role==='admin'){
+      card.innerHTML='<div class="card-check">'+(isSel?'☑':'☐')+'</div>'+
+        '<div class="room-no">'+no+'</div>'+
+        '<div class="room-type">'+room.typeCode+'</div>'+
+        '<div class="room-status status-'+room.status+'">'+KR[room.status]+'</div>'+
+        (room.maidName?'<div class="room-maid">👤 '+room.maidName+'</div>':'');
+      card.onclick=function(){toggleSelect(no);};
+    }else{
+      card.innerHTML='<div class="room-no">'+no+'</div>'+
+        '<div class="room-type">'+room.typeCode+'</div>'+
+        '<div class="room-status status-'+room.status+'">'+KR[room.status]+'</div>'+
+        (room.maidName?'<div class="room-maid">👤 '+room.maidName+'</div>':'');
+      card.onclick=function(){openRoom(no);};
+    }
     grid.appendChild(card);
   });
 }
 
 async function openRoom(no){
+  if(S.selectMode)return;
   no=String(no);
   S.room=S.rooms.find(r=>String(r.roomNo)===no);
   if(!S.room){toast('오류: 객실 없음 '+no);return;}
+  if(S.room.status==='cleaned')S.room={...S.room,status:'inspection'};
   S.status=S.room.status;
   $('mRoomNo').textContent=no+'호';
   $('mRoomType').textContent=S.room.typeName||'';
@@ -179,14 +243,11 @@ async function openRoom(no){
   }catch(e){}
 }
 
-function closeModal(e){
-  if(e.target.id==='roomModal'){$('roomModal').classList.remove('open');S.room=null;}
-}
-
+function closeModal(e){if(e.target.id==='roomModal'){$('roomModal').classList.remove('open');S.room=null;}}
 function selStatus(s){S.status=s;updBtns();}
 
 function updBtns(){
-  const map={occupied:0,uncleaned:1,cleaning:2,cleaned:3,inspection:4,vacant:5};
+  const map={occupied:0,uncleaned:1,cleaning:2,inspection:3,vacant:4};
   document.querySelectorAll('.status-btn').forEach(b=>b.className=b.className.replace(/\bsel-\S+/g,'').trim());
   if(S.status&&map[S.status]!==undefined){
     const btns=document.querySelectorAll('.status-btn');
@@ -210,19 +271,16 @@ async function saveRoom(){
     if(n)calls.push(api({action:'addRoomNote',roomNo:S.room.roomNo,sender:S.name,role:S.role,note:n}));
     await Promise.all(calls);
     if(S.role==='admin'&&prevStatus==='inspection'&&S.status==='vacant'&&S.room.maidName){
-      const maid=S.room.maidName;
-      const roomNo=S.room.roomNo;
-      await api({action:'sendChat',sender:'관리자',role:'admin',message:'✅ '+roomNo+'호 점검 통과! 공실완료 처리되었습니다. ('+maid+' 님 수고하셨습니다 👍)'});
+      await api({action:'sendChat',sender:'관리자',role:'admin',
+        message:'✅ '+S.room.roomNo+'호 점검 통과! 공실완료 처리되었습니다. ('+S.room.maidName+' 님 수고하셨습니다 👍)'});
     }
-    await loadRooms(true);
-    hideLoad();
-    $('roomModal').classList.remove('open');
-    toast('✅ 저장완료');
+    await loadRooms(true);hideLoad();
+    $('roomModal').classList.remove('open');toast('✅ 저장완료');
   }catch(e){hideLoad();toast('저장실패');}
 }
 
 async function confirmReset(){
-  if(!confirm('⚠️ 전체 객실을 미정비로 초기화합니다.\n\n재실·공실완료 포함 모든 상태가 초기화됩니다.\n정말 계속하시겠습니까?'))return;
+  if(!confirm('⚠️ 전체 객실을 미정비로 초기화합니다.\n재실·공실완료 포함 모든 상태가 초기화됩니다.\n정말 계속하시겠습니까?'))return;
   if(!confirm('🔴 재확인: 정말로 전체 초기화하시겠습니까?'))return;
   showLoad('초기화...');
   try{await api({action:'resetRooms'});await loadRooms(true);hideLoad();toast('✅ 초기화완료');}
@@ -231,23 +289,21 @@ async function confirmReset(){
 
 async function openMaidMgmtModal(){$('maidMgmtList').innerHTML='<div style="color:var(--text2);font-size:12px">로딩중...</div>';$('maidMgmtModal').classList.add('open');await refreshMaidList();}
 async function refreshMaidList(){const r=await api({action:'getMaids'});const box=$('maidMgmtList');if(!r.ok){box.innerHTML='<div style="color:var(--uncleaned)">로드 실패</div>';return;}const maids=r.maids||[];if(!maids.length){box.innerHTML='<div style="color:var(--text2);font-size:12px">등록된 메이드 없음</div>';return;}box.innerHTML='';maids.forEach(function(name){const row=document.createElement('div');row.className='maid-row';row.innerHTML='<span class="maid-row-name">👤 '+esc(name)+'</span>';const btn=document.createElement('button');btn.className='maid-del-btn';btn.textContent='삭제';btn.onclick=function(){removeMaid(name);};row.appendChild(btn);box.appendChild(row);});}
-async function addMaid(){const inp=$('newMaidInput');const name=inp.value.trim();if(!name)return;showLoad('추가 중...');const r=await api({action:'addMaid',name:name});hideLoad();if(r.ok){inp.value='';toast('✅ '+name+' 추가완료');await refreshMaidList();}else toast('추가 실패: '+(r.error||''));}
-async function removeMaid(name){if(!confirm(name+' 님을 명단에서 삭제하시겠습니까?'))return;showLoad('삭제 중...');const r=await api({action:'removeMaid',name:name});hideLoad();if(r.ok){toast('✅ '+name+' 삭제완료');await refreshMaidList();}else toast('삭제 실패: '+(r.error||''));}
+async function addMaid(){const inp=$('newMaidInput');const name=inp.value.trim();if(!name)return;showLoad('추가 중...');const r=await api({action:'addMaid',name});hideLoad();if(r.ok){inp.value='';toast('✅ '+name+' 추가완료');await refreshMaidList();}else toast('추가 실패: '+(r.error||''));}
+async function removeMaid(name){if(!confirm(name+' 님을 명단에서 삭제하시겠습니까?'))return;showLoad('삭제 중...');const r=await api({action:'removeMaid',name});hideLoad();if(r.ok){toast('✅ '+name+' 삭제완료');await refreshMaidList();}else toast('삭제 실패: '+(r.error||''));}
 function closeMaidMgmtModal(e){if(!e||e.target.id==='maidMgmtModal')$('maidMgmtModal').classList.remove('open');}
 function openChangePinModal(){$('cpCurrent').value='';$('cpNew').value='';$('cpConfirm').value='';$('cpError').textContent='';$('changePinModal').classList.add('open');}
 function closeChangePinModal(e){if(!e||e.target.id==='changePinModal')$('changePinModal').classList.remove('open');}
-async function savePin(){const cur=$('cpCurrent').value.trim();const nw=$('cpNew').value.trim();const cf=$('cpConfirm').value.trim();if(!cur||!nw||!cf){$('cpError').textContent='모든 항목을 입력하세요';return;}if(nw.length<4||!/^\d+$/.test(nw)){$('cpError').textContent='새 PIN은 숫자 4자리 이상';return;}if(nw!==cf){$('cpError').textContent='새 PIN이 일치하지 않습니다';return;}showLoad('PIN 변경 중...');const curHash=await sha256(cur);const newHash=await sha256(nw);const r=await api({action:'changePin',currentHash:curHash,newHash:newHash});hideLoad();if(r.ok){$('changePinModal').classList.remove('open');toast('✅ PIN 변경 완료');}else $('cpError').textContent=r.error||'변경 실패';}
+async function savePin(){const cur=$('cpCurrent').value.trim(),nw=$('cpNew').value.trim(),cf=$('cpConfirm').value.trim();if(!cur||!nw||!cf){$('cpError').textContent='모든 항목을 입력하세요';return;}if(nw.length<4||!/^\d+$/.test(nw)){$('cpError').textContent='새 PIN은 숫자 4자리 이상';return;}if(nw!==cf){$('cpError').textContent='새 PIN이 일치하지 않습니다';return;}showLoad('PIN 변경 중...');const curHash=await sha256(cur),newHash=await sha256(nw);const r=await api({action:'changePin',currentHash:curHash,newHash:newHash});hideLoad();if(r.ok){$('changePinModal').classList.remove('open');toast('✅ PIN 변경 완료');}else $('cpError').textContent=r.error||'변경 실패';}
 
 async function loadChat(silent=false){
   try{
     const r=await api({action:'getChat',since:S.chatSince});
     if(r.ok&&r.messages&&r.messages.length){
-      S.chatSince=r.messages[r.messages.length-1].timestamp;
-      addMsgs(r.messages);
+      S.chatSince=r.messages[r.messages.length-1].timestamp;addMsgs(r.messages);
     }
   }catch(e){}
 }
-
 function addMsgs(msgs){
   const box=$('chatMsgs');
   msgs.forEach(function(m){
@@ -255,37 +311,15 @@ function addMsgs(msgs){
     const d=document.createElement('div');
     d.style.cssText='display:flex;flex-direction:column;align-items:'+(mine?'flex-end':'flex-start');
     d.innerHTML=(!mine?'<div class="chat-sender">'+m.sender+' ('+(m.role==='admin'?'관리자':'메이드')+')</div>':'')+
-      '<div class="chat-bubble '+(mine?'mine':'other')+'">'+esc(m.message)+
-      '<div class="chat-time">'+fmt(m.timestamp)+'</div></div>';
+      '<div class="chat-bubble '+(mine?'mine':'other')+'">'+esc(m.message)+'<div class="chat-time">'+fmt(m.timestamp)+'</div></div>';
     box.appendChild(d);
   });
   box.scrollTop=box.scrollHeight;
 }
-
-async function sendMsg(){
-  const inp=$('chatInput');
-  const m=inp.value.trim();
-  if(!m)return;
-  inp.value='';
-  try{await api({action:'sendChat',sender:S.name,role:S.role,message:m});await loadChat(true);}
-  catch(e){toast('전송실패');}
-}
-
-function showTab(tab){
-  document.querySelectorAll('.nav-tab').forEach((t,i)=>t.classList.toggle('active',(tab==='rooms')===(i===0)));
-  $('tabRooms').style.display=tab==='rooms'?'block':'none';
-  $('tabChat').style.display=tab==='chat'?'block':'none';
-  if(tab==='chat'){S.chatSince=null;$('chatMsgs').innerHTML='';loadChat();}
-}
-
-function fmt(iso){
-  if(!iso)return'';
-  return new Date(iso).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
-}
-
-function esc(s){
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
+async function sendMsg(){const inp=$('chatInput');const m=inp.value.trim();if(!m)return;inp.value='';try{await api({action:'sendChat',sender:S.name,role:S.role,message:m});await loadChat(true);}catch(e){toast('전송실패');}}
+function showTab(tab){document.querySelectorAll('.nav-tab').forEach((t,i)=>t.classList.toggle('active',(tab==='rooms')===(i===0)));$('tabRooms').style.display=tab==='rooms'?'block':'none';$('tabChat').style.display=tab==='chat'?'block':'none';if(tab==='chat'){S.chatSince=null;$('chatMsgs').innerHTML='';loadChat();}}
+function fmt(iso){if(!iso)return'';return new Date(iso).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
 (function restoreSession(){
   const role=sessionStorage.getItem('hk_role');
