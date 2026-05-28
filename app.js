@@ -14,7 +14,6 @@ const KR = {
   cleaning:'정비중 / Cleaning',
   inspection:'인스펙션필요 / Inspection',
   vacant:'공실완료 / Vacant',
-  ,
   broken:'고장 / Broken',
   cleaned:'인스펙션필요 / Inspection'
 };
