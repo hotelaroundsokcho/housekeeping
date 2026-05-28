@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <title>객실정비 | Hotel Around Sokcho</title>
 <style>
-:root{--bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2e3248;--accent:#6c8fff;--text:#e8eaf0;--text2:#8b91a8;--occupied:#3b82f6;--uncleaned:#ef4444;--cleaning:#f59e0b;--inspection:#a855f7;--vacant:#06b6d4;--radius:12px;}
+:root{--bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2e3248;--accent:#6c8fff;--text:#e8eaf0;--text2:#8b91a8;--occupied:#f472b6;--uncleaned:#ef4444;--cleaning:#f59e0b;--inspection:#e2e8f0;--vacant:#4ade80;--broken:#ff6b35;--radius:12px;}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif;min-height:100vh;}
 #loginScreen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px;}
@@ -39,6 +39,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 .s-uncleaned .stat-num{color:var(--uncleaned);}
 .s-cleaning .stat-num{color:var(--cleaning);}
 .s-inspection .stat-num{color:var(--inspection);}
+.s-broken .stat-num{color:var(--broken);}
 .s-vacant .stat-num{color:var(--vacant);}
 .maid-stats-section{margin-bottom:14px;}
 .maid-stats-title{font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em;}
@@ -72,6 +73,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 .room-card.cleaning::before{background:var(--cleaning);}
 .room-card.inspection::before{background:var(--inspection);}
 .room-card.vacant::before{background:var(--vacant);}
+.room-card.broken::before{background:var(--broken);}
 .room-card.card-selected{border-color:var(--uncleaned);box-shadow:0 0 0 2px rgba(239,68,68,.3);}
 .card-check{font-size:18px;position:absolute;top:8px;right:10px;color:var(--uncleaned);}
 .room-no{font-size:20px;font-weight:700;}
@@ -81,11 +83,12 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 .bed-twin{background:rgba(168,85,247,.18);color:#c084fc;border:1px solid rgba(168,85,247,.35);}
 .bed-double{background:rgba(245,158,11,.15);color:#fbbf24;border:1px solid rgba(245,158,11,.35);}
 .room-status{display:inline-block;margin-top:8px;padding:3px 8px;border-radius:20px;font-size:10px;font-weight:600;}
-.status-occupied{background:rgba(59,130,246,.15);color:var(--occupied);}
+.status-occupied{background:rgba(244,114,182,.18);color:var(--occupied);}
 .status-uncleaned{background:rgba(239,68,68,.15);color:var(--uncleaned);}
 .status-cleaning{background:rgba(245,158,11,.15);color:var(--cleaning);}
-.status-inspection{background:rgba(168,85,247,.15);color:var(--inspection);}
-.status-vacant{background:rgba(6,182,212,.15);color:var(--vacant);}
+.status-inspection{background:rgba(226,232,240,.12);color:var(--inspection);}
+.status-broken{background:rgba(255,107,53,.18);color:var(--broken);}
+.status-vacant{background:rgba(74,222,128,.15);color:var(--vacant);}
 .room-maid{font-size:10px;color:var(--text2);margin-top:4px;}
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:flex-end;justify-content:center;}
 .modal-overlay.open{display:flex;}
@@ -102,7 +105,8 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 .status-btn.sel-uncleaned{border-color:var(--uncleaned);background:rgba(239,68,68,.15);color:var(--uncleaned);}
 .status-btn.sel-cleaning{border-color:var(--cleaning);background:rgba(245,158,11,.15);color:var(--cleaning);}
 .status-btn.sel-inspection{border-color:var(--inspection);background:rgba(168,85,247,.15);color:var(--inspection);}
-.status-btn.sel-vacant{border-color:var(--vacant);background:rgba(6,182,212,.15);color:var(--vacant);}
+.status-btn.sel-vacant{border-color:var(--vacant);background:rgba(74,222,128,.15);color:var(--vacant);}
+.status-btn.sel-broken{border-color:var(--broken);background:rgba(255,107,53,.18);color:var(--broken);}
 .maid-input,.note-input{width:100%;padding:11px 13px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;outline:none;}
 .note-input{resize:none;height:80px;}
 .modal-save-btn{width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;}
@@ -172,14 +176,15 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 <div class="nav-tab" onclick="showTab('chat')">💬 채팅</div>
 </div>
 <div id="tabRooms" class="content">
-<div class="stats-row-top">
-<div class="stat-card s-occupied"><div class="stat-num" id="cnt0">0</div><div class="stat-label">🔵 재실 / Occupied</div></div>
+<div class="stats-row" style="margin-bottom:8px">
+<div class="stat-card s-occupied"><div class="stat-num" id="cnt0">0</div><div class="stat-label">💗 재실 / Occupied</div></div>
 <div class="stat-card s-uncleaned"><div class="stat-num" id="cnt1">0</div><div class="stat-label">🔴 미정비 / Uncleaned</div></div>
+<div class="stat-card s-cleaning"><div class="stat-num" id="cnt2">0</div><div class="stat-label">🟡 정빈중 / Cleaning</div></div>
 </div>
 <div class="stats-row">
-<div class="stat-card s-cleaning"><div class="stat-num" id="cnt2">0</div><div class="stat-label">🟡 정비중 / Cleaning</div></div>
-<div class="stat-card s-inspection"><div class="stat-num" id="cnt3">0</div><div class="stat-label">🟣 인스펙션필요 / Inspection</div></div>
-<div class="stat-card s-vacant"><div class="stat-num" id="cnt4">0</div><div class="stat-label">💙 공실완료 / Vacant</div></div>
+<div class="stat-card s-inspection"><div class="stat-num" id="cnt3">0</div><div class="stat-label">◻️ 인스펙션 / Inspection</div></div>
+<div class="stat-card s-vacant"><div class="stat-num" id="cnt4">0</div><div class="stat-label">🟢 공실완료 / Vacant</div></div>
+<div class="stat-card s-broken"><div class="stat-num" id="cnt5">0</div><div class="stat-label">🔶 고장 / Broken</div></div>
 </div>
 <div class="maid-stats-section" id="maidStatsSection" style="display:none">
 <div class="maid-stats-title">👥 메이드별 현황</div>
@@ -192,6 +197,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 <button class="filter-btn" data-filter="cleaning" onclick="setFilter('cleaning')">🟡 정비중 / Cleaning</button>
 <button class="filter-btn" data-filter="inspection" onclick="setFilter('inspection')">🟣 인스펙션 / Inspection</button>
 <button class="filter-btn" data-filter="vacant" onclick="setFilter('vacant')">💙 공실완료 / Vacant</button>
+<button class="filter-btn" data-filter="broken" onclick="setFilter('broken')">🔶 고장 / Broken</button>
 </div>
 <button class="select-mode-btn" id="selectModeBtn" style="display:none" onclick="toggleSelectMode()">☑ 객실 선택 (일괄 체크아웃)</button>
 <button class="reset-btn" id="resetBtn" style="display:none" onclick="confirmReset()">⚠️ 전체 초기화 (긴급용)</button>
@@ -219,14 +225,15 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 <h3 id="mRoomNo"></h3>
 <div class="room-type-lg" id="mRoomType"></div>
 <div class="modal-section"><label>상태 변경 / Change Status</label>
-<div class="status-btns-top">
-<button class="status-btn status-btn-admin" onclick="selStatus('occupied')">🔵 재실<br><small>Occupied</small></button>
+<div class="status-btns-row">
+<button class="status-btn status-btn-admin" onclick="selStatus('occupied')">🩷 재실<br><small>Occupied</small></button>
 <button class="status-btn status-btn-admin" onclick="selStatus('uncleaned')">🔴 미정비<br><small>Uncleaned</small></button>
+<button class="status-btn status-btn-admin" onclick="selStatus('broken')">🔶 고장<br><small>Broken</small></button>
 </div>
-<div class="status-btns-bottom">
+<div class="status-btns-row">
 <button class="status-btn" onclick="selStatus('cleaning')">🟡 정비중<br><small>Cleaning</small></button>
-<button class="status-btn" onclick="selStatus('inspection')">🟣 인스펙션필요<br><small>Inspection</small></button>
-<button class="status-btn status-btn-admin" onclick="selStatus('vacant')">💙 공실완료<br><small>Vacant</small></button>
+<button class="status-btn" onclick="selStatus('inspection')">⬜ 인스펙션필요<br><small>Inspection</small></button>
+<button class="status-btn status-btn-admin" onclick="selStatus('vacant')">🟢 공실완료<br><small>Vacant</small></button>
 </div>
 </div>
 <div class="modal-section" id="maidSec"><label>메이드 배정 (관리자)</label><input type="text" class="maid-input" id="maidInput" placeholder="메이드 이름"></div>
