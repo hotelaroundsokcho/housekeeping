@@ -5,6 +5,13 @@ let S = {
   selectMode:false, selected:new Set()
 };
 let timer = null;
+const MAID_COLOR_MAP = {};
+let _maidColorIdx = 0;
+function getMaidColorIdx(name){
+  if(!name) return -1;
+  if(MAID_COLOR_MAP[name] === undefined) MAID_COLOR_MAP[name] = _maidColorIdx++ % 5;
+  return MAID_COLOR_MAP[name];
+}
 const $ = id => document.getElementById(id);
 
 // 한글 + 영어 병기 / 점검필요 → 인스펙션필요
@@ -59,14 +66,29 @@ function switchTab(t){
 async function login(){
   const p=$('pinInput').value.trim();
   if(!p)return;
+  const nameSelect=$('adminNameSelect');
+  if(nameSelect && nameSelect.style.display==='block'){
+    if(!S.name){$('loginError').textContent='이름을 선택하세요';return;}
+    sessionStorage.setItem('hk_role','admin');sessionStorage.setItem('hk_name',S.name);go();return;
+  }
   showLoad('인증 중...');
   const hash=await sha256(p);
   const r=await api({action:'verifyPin',pin:hash});
   hideLoad();
-  if(r.ok){S.role='admin';S.name='관리자';sessionStorage.setItem('hk_role','admin');sessionStorage.setItem('hk_name','관리자');go();}
-  else $('loginError').textContent='PIN 오류';
+  if(r.ok){
+    if(nameSelect) nameSelect.style.display='block';
+    $('loginError').textContent='';
+  }else $('loginError').textContent='PIN 오류';
 }
 
+function selectAdminName(idx){
+  const names=['장경순','박지연'];
+  S.role='admin'; S.name=names[idx];
+  document.querySelectorAll('.admin-name-btn').forEach((b,i)=>b.classList.toggle('active',i===idx));
+  sessionStorage.setItem('hk_role','admin');
+  sessionStorage.setItem('hk_name',S.name);
+  go();
+}
 async function loginMaid(){
   const n=$('maidNameInput').value.trim();
   if(!n){$('loginError').textContent='이름을 입력하세요';return;}
@@ -81,12 +103,13 @@ function logout(){
   clearInterval(timer);
   sessionStorage.removeItem('hk_role');
   sessionStorage.removeItem('hk_name');
+  const ns=$('adminNameSelect');if(ns){ns.style.display='none';}
   switchTab('admin');
   S={role:null,name:'',rooms:[],filter:'all',room:null,status:null,chatSince:null,selectMode:false,selected:new Set()};
   $('loginScreen').style.display='flex';$('app').style.display='none';
   $('pinInput').value='';$('maidNameInput').value='';
+  document.querySelectorAll('.admin-name-btn').forEach(b=>b.classList.remove('active'));
 }
-
 async function go(){
   $('loginScreen').style.display='none';$('app').style.display='flex';
   $('headerSub').textContent=S.role==='admin'?'관리자 모드':S.name+' 님';
@@ -96,6 +119,7 @@ async function go(){
   showLoad('로딩 중...');
   await loadRooms();
   hideLoad();
+  maybeShowNotifBar();
   clearInterval(timer);
   timer=setInterval(()=>{
     const tab=document.querySelector('.nav-tab.active');
@@ -215,7 +239,9 @@ function render(){
     const no=String(room.roomNo);
     const isSel=S.selected.has(no);
     const card=document.createElement('div');
-    card.className='room-card '+room.status+(isSel?' card-selected':'');
+    const assignedIdx = getMaidColorIdx(room.maidName);
+    const assignedClass = assignedIdx >= 0 ? ' assigned-'+assignedIdx : '';
+    card.className='room-card '+room.status+(isSel?' card-selected':'')+assignedClass;
     const badge=bedBadge(room.typeCode);
     if(S.selectMode&&S.role==='admin'){
       card.innerHTML='<div class="card-check">'+(isSel?'☑':'☐')+'</div>'+
@@ -329,6 +355,7 @@ function addMsgs(msgs){
   const box=$('chatMsgs');
   msgs.forEach(function(m){
     const mine=m.sender===S.name;
+    if(!mine) sendChatNotif(m);
     const d=document.createElement('div');
     d.style.cssText='display:flex;flex-direction:column;align-items:'+(mine?'flex-end':'flex-start');
     d.innerHTML=(!mine?'<div class="chat-sender">'+m.sender+' ('+(m.role==='admin'?'관리자':'메이드')+')</div>':'')+
@@ -340,6 +367,46 @@ function addMsgs(msgs){
 async function sendMsg(){const inp=$('chatInput');const m=inp.value.trim();if(!m)return;inp.value='';try{await api({action:'sendChat',sender:S.name,role:S.role,message:m});await loadChat(true);}catch(e){toast('전송실패');}}
 function showTab(tab){document.querySelectorAll('.nav-tab').forEach((t,i)=>t.classList.toggle('active',(tab==='rooms')===(i===0)));$('tabRooms').style.display=tab==='rooms'?'block':'none';$('tabChat').style.display=tab==='chat'?'block':'none';if(tab==='chat'){S.chatSince=null;$('chatMsgs').innerHTML='';loadChat();}}
 function fmt(iso){if(!iso)return'';return new Date(iso).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});}
+// ── 브라우저 알림 ──────────────────────────
+function requestNotifPermission(){
+  if(!('Notification' in window)){toast('이 브라우저는 알림을 지원하지 않습니다');return;}
+  Notification.requestPermission().then(function(perm){
+    const bar=$('notifBar');
+    if(perm==='granted'){
+      if(bar)bar.classList.remove('show');
+      toast('✅ 알림이 허용되었습니다');
+      new Notification('Hotel Around Sokcho',{body:'새 메시지 알림이 활성화되었습니다 🔔',icon:'/housekeeping/favicon.ico'});
+    }else{
+      if(bar)bar.classList.remove('show');
+      toast('알림이 거부되었습니다');
+    }
+  });
+}
+
+function maybeShowNotifBar(){
+  if(!('Notification' in window))return;
+  if(Notification.permission==='default'){
+    const bar=$('notifBar');
+    if(bar)bar.classList.add('show');
+  }
+}
+
+function sendChatNotif(msg){
+  if(!('Notification' in window))return;
+  if(Notification.permission!=='granted')return;
+  if(document.visibilityState==='visible'){
+    // 앱이 포그라운드라면 알림 없이 토스트만
+    return;
+  }
+  const senderLabel = msg.role==='admin'?'관리자':'메이드';
+  new Notification('💬 '+msg.sender+' ('+senderLabel+')',{
+    body: msg.message.length>60 ? msg.message.substring(0,60)+'…' : msg.message,
+    icon:'/housekeeping/favicon.ico',
+    tag:'hk-chat'
+  });
+}
+// ────────────────────────────────────────────
+
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
 (function restoreSession(){
