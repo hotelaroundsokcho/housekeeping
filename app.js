@@ -1,7 +1,7 @@
 const API = 'https://script.google.com/macros/s/AKfycbzEZj1UW3bejogNEuqmThCZNPlFdqXhq2zmlHI-D8cFgLFszs9G3Zcb4EFau1NyJl6D/exec';
 let S = {
 role:null, name:'', rooms:[], filter:'all',
-fix: 2인 동시 배정 시 메이드 화면 필터 수정selectMode:false, selected:new Set(),
+selectMode:false, selected:new Set(),
 assignMode:false, assignSelected:new Set()
 };
 let timer = null;
