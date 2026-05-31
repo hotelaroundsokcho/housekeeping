@@ -168,6 +168,12 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 .maid-add-input{flex:1;padding:11px 13px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;outline:none;}
 .maid-add-btn{padding:11px 16px;background:var(--vacant);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;}
 .pin-error{color:var(--uncleaned);font-size:12px;text-align:center;margin-bottom:10px;min-height:16px;}
+
+.assign-mode-btn{width:100%;padding:11px;background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.3);color:#a78bfa;border-radius:var(--radius);font-size:13px;font-weight:600;cursor:pointer;margin-bottom:10px;}
+.bulk-assign-bar{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:10px 14px;z-index:150;flex-direction:column;gap:8px;}
+.bulk-assign-top{display:flex;align-items:center;justify-content:space-between;}
+.assign-count{font-size:13px;color:var(--text2);font-weight:600;}
+.assign-maid-btns{display:flex;gap:8px;flex-wrap:wrap;}
 </style>
 </head>
 <body>
@@ -241,6 +247,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 <button class="filter-btn" data-filter="broken" onclick="setFilter('broken')">🔶 고장 / Broken</button>
 </div>
 <button class="select-mode-btn" id="selectModeBtn" style="display:none" onclick="toggleSelectMode()">☑ 객실 선택 (일괄 체크아웃)</button>
+<button class="assign-mode-btn" id="assignModeBtn" style="display:none" onclick="toggleAssignMode()">👤 메이드 일괄 배정</button>
 <button class="reset-btn" id="resetBtn" style="display:none" onclick="confirmReset()">⚠️ 전체 초기화 (긴급용)</button>
 <button class="maid-mgmt-btn" id="maidMgmtBtn" style="display:none" onclick="openMaidMgmtModal()">👥 메이드 명단 관리</button>
 <button class="change-pin-btn" id="changePinBtn" style="display:none" onclick="openChangePinModal()">🔑 관리자 PIN 변경</button>
@@ -259,6 +266,10 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 <div class="bulk-bar" id="bulkBar">
 <span class="bulk-count" id="bulkCount">0개 선택됨</span>
 <button class="bulk-btn" id="bulkBtn" onclick="bulkCheckout()" disabled>🔴 체크아웃 (미정비) 등록</button>
+</div>
+<div class="bulk-assign-bar" id="bulkAssignBar">
+<div class="bulk-assign-top"><span class="assign-count" id="assignCount">0개 객실 선택됨</span><span style="font-size:11px;color:var(--text2)">객실 선택 후 메이드 버튼 클릭</span></div>
+<div class="assign-maid-btns" id="assignMaidBtns"></div>
 </div>
 <div class="modal-overlay" id="roomModal" onclick="closeModal(event)">
 <div class="modal">
