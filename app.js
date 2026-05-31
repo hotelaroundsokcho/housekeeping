@@ -92,8 +92,12 @@ if(!n){$('loginError').textContent='이름을 입력하세요';return;}
 showLoad('인증 중...');
 const r=await api({action:'verifyMaid',name:n});
 hideLoad();
-if(r.ok){S.role='maid';S.name=n;sessionStorage.setItem('hk_role','maid');sessionStorage.setItem('hk_name',n);go();}
-else $('loginError').textContent=r.error||'등록되지 않은 이름입니다';
+if(r.ok){
+// GAS가 반환한 실제 등록 이름(r.name)을 사용 — 대소문자 정규화
+const canonName=r.name||n;
+S.role='maid';S.name=canonName;
+sessionStorage.setItem('hk_role','maid');sessionStorage.setItem('hk_name',canonName);go();
+}else $('loginError').textContent=r.error||'등록되지 않은 이름입니다';
 }
 
 function logout(){
