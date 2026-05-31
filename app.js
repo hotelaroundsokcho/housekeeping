@@ -1,8 +1,7 @@
 const API = 'https://script.google.com/macros/s/AKfycbzEZj1UW3bejogNEuqmThCZNPlFdqXhq2zmlHI-D8cFgLFszs9G3Zcb4EFau1NyJl6D/exec';
 let S = {
 role:null, name:'', rooms:[], filter:'all',
-room:null, status:null, chatSince:null,
-selectMode:false, selected:new Set(),
+fix: 2인 동시 배정 시 메이드 화면 필터 수정selectMode:false, selected:new Set(),
 assignMode:false, assignSelected:new Set()
 };
 let timer = null;
@@ -361,7 +360,7 @@ let rooms=S.rooms.map(r=>r.status==='cleaned'?{...r,status:'inspection'}:r);
 if(S.filter!=='all')rooms=rooms.filter(x=>x.status===S.filter);
 if(S.role==='maid'){
 rooms=rooms.filter(x=>x.status!=='occupied'&&x.status!=='vacant'&&x.status!=='broken');
-rooms=rooms.filter(x=>!x.maidName||x.maidName===S.name);
+rooms=rooms.filter(x=>!x.maidName||x.maidName.split(',').map(n=>n.trim()).includes(S.name));
 }
 const grid=$('roomsGrid');grid.innerHTML='';
 rooms.forEach(function(room){
