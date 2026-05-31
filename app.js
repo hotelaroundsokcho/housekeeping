@@ -239,6 +239,17 @@ return d.toLocaleDateString('ko-KR',{month:'numeric',day:'numeric'})+' '+d.toLoc
 // 메이드 배정 컬러 팔레트 (5가지)
 const MAID_COLORS = ['#06b6d4','#a78bfa','#fb923c','#f472b6','#facc15'];
 
+// 상태별 카드 배경 테마 (카드 배경 전면 컬러 변경)
+const STATUS_CARD_THEME = {
+occupied:   {bg:'#3d1a2e', border:'#f472b6', numColor:'#fce7f3', dimColor:'#f9a8d4'},
+uncleaned:  {bg:'#3d0f0f', border:'#ef4444', numColor:'#fee2e2', dimColor:'#fca5a5'},
+cleaning:   {bg:'#3d2a00', border:'#f59e0b', numColor:'#fef3c7', dimColor:'#fde68a'},
+inspection: {bg:'#1e2535', border:'#94a3b8', numColor:'#e2e8f0', dimColor:'#94a3b8'},
+vacant:     {bg:'#0d2e1a', border:'#4ade80', numColor:'#dcfce7', dimColor:'#86efac'},
+broken:     {bg:'#2e1a0a', border:'#ff6b35', numColor:'#ffedd5', dimColor:'#fdba74'},
+cleaned:    {bg:'#1e2535', border:'#94a3b8', numColor:'#e2e8f0', dimColor:'#94a3b8'}
+};
+
 function render(){
 let rooms=S.rooms.map(r=>r.status==='cleaned'?{...r,status:'inspection'}:r);
 if(S.filter!=='all')rooms=rooms.filter(x=>x.status===S.filter);
@@ -251,39 +262,32 @@ rooms.forEach(function(room){
 const no=String(room.roomNo);
 const isSel=S.selected.has(no);
 const card=document.createElement('div');
-const assignedIdx = getMaidColorIdx(room.maidName);
-const maidColor = assignedIdx >= 0 ? MAID_COLORS[assignedIdx] : null;
-// 카드 클래스: 상태 클래스 + 선택 클래스
-let cardClass = 'room-card '+room.status+(isSel?' card-selected':'');
-card.className = cardClass;
-// 메이드 배정 시: 좌측 accent 바 + 연한 틴트 배경 + 테두리 컬러
-if(maidColor){
-card.style.borderColor = maidColor;
-card.style.borderLeft = '4px solid '+maidColor;
-card.style.boxShadow = '0 0 0 1px '+maidColor+'55';
-card.style.background = 'color-mix(in srgb, '+maidColor+' 8%, var(--surface) 92%)';
-}
+const assignedIdx=getMaidColorIdx(room.maidName);
+const maidColor=assignedIdx>=0?MAID_COLORS[assignedIdx]:null;
+const theme=STATUS_CARD_THEME[room.status]||STATUS_CARD_THEME.inspection;
+
+card.className='room-card'+(isSel?' card-selected':'');
+card.style.background=theme.bg;
+card.style.border='1px solid '+(isSel?'#ef4444':theme.border);
+if(maidColor){card.style.borderLeft='5px solid '+maidColor;}
+
 const badge=bedBadge(room.typeCode);
 const timeStr=fmtCardTime(room.updatedAt);
-const timeHtml=timeStr?'<div class="room-time">'+timeStr+'</div>':'';
-// 메이드 배지 HTML (컬러 인라인 적용)
+const timeHtml=timeStr?'<div class="room-time" style="color:'+theme.dimColor+'">'+timeStr+'</div>':'';
 const maidHtml=room.maidName
-? '<div class="room-maid-badge"'+(maidColor?' style="background:'+maidColor+'22;color:'+maidColor+';border-color:'+maidColor+'55"':'')+'>'
-  +'<span class="maid-dot"'+(maidColor?' style="background:'+maidColor+'"':'')+'></span>'
-  +esc(room.maidName)+'</div>'
-: '';
-if(S.selectMode&&S.role==='admin'){
-card.innerHTML='<div class="card-check">'+(isSel?'☑':'☐')+'</div>'+
-'<div class="room-no">'+no+'</div>'+
-'<div class="room-type-row"><span class="room-type">'+room.typeCode+'</span>'+badge+'</div>'+
+?'<div class="room-maid-badge"'+(maidColor?' style="background:'+maidColor+'22;color:'+maidColor+';border-color:'+maidColor+'44"':'')+'>'
++'<span class="maid-dot"'+(maidColor?' style="background:'+maidColor+'"':'')+'></span>'+esc(room.maidName)+'</div>'
+:'';
+const innerHtml=
+'<div class="room-no" style="color:'+theme.numColor+'">'+no+'</div>'+
+'<div class="room-type-row"><span class="room-type" style="color:'+theme.dimColor+'">'+room.typeCode+'</span>'+badge+'</div>'+
 '<div class="room-status status-'+room.status+'">'+KR[room.status]+'</div>'+
 maidHtml+timeHtml;
+if(S.selectMode&&S.role==='admin'){
+card.innerHTML='<div class="card-check">'+(isSel?'☑':'☐')+'</div>'+innerHtml;
 card.onclick=function(){toggleSelect(no);};
 }else{
-card.innerHTML='<div class="room-no">'+no+'</div>'+
-'<div class="room-type-row"><span class="room-type">'+room.typeCode+'</span>'+badge+'</div>'+
-'<div class="room-status status-'+room.status+'">'+KR[room.status]+'</div>'+
-maidHtml+timeHtml;
+card.innerHTML=innerHtml;
 card.onclick=function(){openRoom(no);};
 }
 grid.appendChild(card);
