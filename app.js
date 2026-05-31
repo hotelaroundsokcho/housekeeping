@@ -14,7 +14,6 @@ return MAID_COLOR_MAP[name];
 }
 const $ = id => document.getElementById(id);
 
-// 한글 + 영어 병기 / 점검필요 → 인스펙션필요
 const KR = {
 occupied:'재실 / Occupied',
 uncleaned:'미정비 / Uncleaned',
@@ -25,13 +24,11 @@ broken:'고장 / Broken',
 cleaned:'인스펙션필요 / Inspection'
 };
 
-// 채팅 자동발송용 한글 전용 라벨 (KR과 별도)
 const KR_CHAT = {
 occupied:'재실', uncleaned:'미정비', cleaning:'정비중',
 inspection:'인스펙션필요', vacant:'공실완료', broken:'고장'
 };
 
-// 타입코드 세 번째 글자 → 침대타입 배지
 function bedBadge(typeCode) {
 if (!typeCode || typeCode.length < 3) return '';
 const c = typeCode[2].toUpperCase();
@@ -127,7 +124,6 @@ if(tab&&tab.textContent.includes('객실'))loadRooms(true);
 else loadChat(true);
 },15000);
 }
-
 async function loadRooms(silent=false){
 try{
 const r=await api({action:'getRooms'});
@@ -165,8 +161,8 @@ names.forEach(function(name){
 const d=tally[name];
 const pct=d.total?Math.round(d.done/d.total*100):0;
 const card=document.createElement('div');card.className='maid-stat-card';
-card.innerHTML='<div class="maid-stat-name">👤 '+esc(name)+'</div>'+
-'<div class="maid-stat-numbers"><span class="maid-stat-done">✅ '+d.done+'</span><span class="maid-stat-wip">🔄 '+d.wip+'</span><span class="maid-stat-total">/ '+d.total+'객실</span></div>'+
+card.innerHTML='<div class="maid-stat-name">'+esc(name)+'</div>'+
+'<div class="maid-stat-numbers"><span class="maid-stat-done">완료 '+d.done+'</span><span class="maid-stat-wip">정비중 '+d.wip+'</span><span class="maid-stat-total">/ '+d.total+'객실</span></div>'+
 '<div class="maid-stat-bar-wrap"><div class="maid-stat-bar" style="width:'+pct+'%"></div></div>'+
 '<div class="maid-stat-pct">'+pct+'% 완료</div>';
 box.appendChild(card);
@@ -209,9 +205,11 @@ $('bulkBtn').style.opacity=cnt===0?'0.4':'1';
 async function bulkCheckout(){
 const cnt=S.selected.size;if(!cnt)return;
 if(!confirm(cnt+'개 객실을 미정비(체크아웃)로 등록합니다.\n계속하시겠습니까?'))return;
+// FIX: 선택 목록을 먼저 복사한 뒤 모드 해제 (toggleSelectMode가 S.selected를 초기화하기 때문)
+const rooms=[...S.selected];
 toggleSelectMode();
 showLoad('0 / '+cnt+' 처리 중...');
-const rooms=[...S.selected];let done=0;
+let done=0;
 for(const roomNo of rooms){
 await api({action:'updateRoom',roomNo,status:'uncleaned',updaterName:S.name,updaterRole:S.role});
 done++;
@@ -227,15 +225,10 @@ document.querySelectorAll('.filter-btn').forEach(b=>b.classList.toggle('active',
 render();
 }
 
-// 상태별 시간 라벨 (카드에 표시)
 function fmtCardTime(iso){
 if(!iso)return'';
 const d=new Date(iso);
 const now=new Date();
-const diffMs=now-d;
-const diffMin=Math.floor(diffMs/60000);
-const diffH=Math.floor(diffMin/60);
-// 오늘이면 시:분만, 아니면 날짜+시:분
 const isToday=d.toLocaleDateString('ko-KR')===now.toLocaleDateString('ko-KR');
 if(isToday){
 return d.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
@@ -243,6 +236,8 @@ return d.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
 return d.toLocaleDateString('ko-KR',{month:'numeric',day:'numeric'})+' '+d.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
 }
 }
+// 메이드 배정 컬러 팔레트 (5가지)
+const MAID_COLORS = ['#06b6d4','#a78bfa','#fb923c','#f472b6','#facc15'];
 
 function render(){
 let rooms=S.rooms.map(r=>r.status==='cleaned'?{...r,status:'inspection'}:r);
@@ -257,31 +252,43 @@ const no=String(room.roomNo);
 const isSel=S.selected.has(no);
 const card=document.createElement('div');
 const assignedIdx = getMaidColorIdx(room.maidName);
-const assignedClass = assignedIdx >= 0 ? ' assigned-'+assignedIdx : '';
-card.className='room-card '+room.status+(isSel?' card-selected':'')+assignedClass;
+const maidColor = assignedIdx >= 0 ? MAID_COLORS[assignedIdx] : null;
+// 카드 클래스: 상태 클래스 + 선택 클래스
+let cardClass = 'room-card '+room.status+(isSel?' card-selected':'');
+card.className = cardClass;
+// 메이드 배정 시: 좌측 accent 바 + 연한 틴트 배경 + 테두리 컬러
+if(maidColor){
+card.style.borderColor = maidColor;
+card.style.borderLeft = '4px solid '+maidColor;
+card.style.boxShadow = '0 0 0 1px '+maidColor+'55';
+card.style.background = 'color-mix(in srgb, '+maidColor+' 8%, var(--surface) 92%)';
+}
 const badge=bedBadge(room.typeCode);
 const timeStr=fmtCardTime(room.updatedAt);
-const timeHtml=timeStr?'<div class="room-time">🕐 '+timeStr+'</div>':'';
+const timeHtml=timeStr?'<div class="room-time">'+timeStr+'</div>':'';
+// 메이드 배지 HTML (컬러 인라인 적용)
+const maidHtml=room.maidName
+? '<div class="room-maid-badge"'+(maidColor?' style="background:'+maidColor+'22;color:'+maidColor+';border-color:'+maidColor+'55"':'')+'>'
+  +'<span class="maid-dot"'+(maidColor?' style="background:'+maidColor+'"':'')+'></span>'
+  +esc(room.maidName)+'</div>'
+: '';
 if(S.selectMode&&S.role==='admin'){
 card.innerHTML='<div class="card-check">'+(isSel?'☑':'☐')+'</div>'+
 '<div class="room-no">'+no+'</div>'+
 '<div class="room-type-row"><span class="room-type">'+room.typeCode+'</span>'+badge+'</div>'+
 '<div class="room-status status-'+room.status+'">'+KR[room.status]+'</div>'+
-(room.maidName?'<div class="room-maid">👤 '+room.maidName+'</div>':'')+
-timeHtml;
+maidHtml+timeHtml;
 card.onclick=function(){toggleSelect(no);};
 }else{
 card.innerHTML='<div class="room-no">'+no+'</div>'+
 '<div class="room-type-row"><span class="room-type">'+room.typeCode+'</span>'+badge+'</div>'+
 '<div class="room-status status-'+room.status+'">'+KR[room.status]+'</div>'+
-(room.maidName?'<div class="room-maid">👤 '+room.maidName+'</div>':'')+
-timeHtml;
+maidHtml+timeHtml;
 card.onclick=function(){openRoom(no);};
 }
 grid.appendChild(card);
 });
 }
-
 async function openRoom(no){
 if(S.selectMode)return;
 no=String(no);
@@ -293,7 +300,6 @@ $('mRoomNo').textContent=no+'호';
 $('mRoomType').textContent=S.room.typeName||'';
 $('maidInput').value=S.room.maidName||'';
 $('noteInput').value='';
-// 모달에 현재 상태 변경 시간 표시
 const modalTime=$('mModalTime');
 if(modalTime){
 const ts=fmtCardTime(S.room.updatedAt);
@@ -315,19 +321,18 @@ $('notesList').innerHTML=r.notes.slice().reverse().map(n=>
 $('notesList').innerHTML='<div style="color:var(--text2);font-size:12px">메모 없음</div>';
 }
 }catch(e){}
-  // 변경 이력 로드
-  try{
-    const rh=await api({action:'getRoomHistory',roomNo:no,limit:5});
-    const hl=$('historyList');
-    if(hl){
-      if(rh.ok&&rh.history&&rh.history.length){
-        const KR_S={occupied:'재실',uncleaned:'미정비',cleaning:'정비중',inspection:'인스펝션필요',vacant:'공실완료',broken:'고장',cleaned:'인스펝션필요'};
-        hl.innerHTML=rh.history.map(h=>'<div class="note-item"><div class="note-meta">'+esc(h.changedBy||'?')+' · '+fmt(h.timestamp)+'</div>'+(KR_S[h.fromStatus]||h.fromStatus||'?')+' → '+(KR_S[h.toStatus]||h.toStatus||'?')+'</div>').join('');
-      }else{
-        hl.innerHTML='<div style="color:var(--text2);font-size:13px">이력 없음</div>';
-      }
-    }
-  }catch(e){}
+try{
+const rh=await api({action:'getRoomHistory',roomNo:no,limit:5});
+const hl=$('historyList');
+if(hl){
+if(rh.ok&&rh.history&&rh.history.length){
+const KR_S={occupied:'재실',uncleaned:'미정비',cleaning:'정비중',inspection:'인스펙션필요',vacant:'공실완료',broken:'고장',cleaned:'인스펙션필요'};
+hl.innerHTML=rh.history.map(h=>'<div class="note-item"><div class="note-meta">'+esc(h.changedBy||'?')+' · '+fmt(h.timestamp)+'</div>'+(KR_S[h.fromStatus]||h.fromStatus||'?')+' → '+(KR_S[h.toStatus]||h.toStatus||'?')+'</div>').join('');
+}else{
+hl.innerHTML='<div style="color:var(--text2);font-size:13px">이력 없음</div>';
+}
+}
+}catch(e){}
 }
 
 function closeModal(e){if(e.target.id==='roomModal'){$('roomModal').classList.remove('open');S.room=null;}}
@@ -373,7 +378,6 @@ showLoad('초기화...');
 try{await api({action:'resetRooms'});await loadRooms(true);hideLoad();toast('✅ 초기화완료');}
 catch(e){hideLoad();toast('실패');}
 }
-
 async function openMaidMgmtModal(){$('maidMgmtList').innerHTML='<div style="color:var(--text2);font-size:12px">로딩중...</div>';$('maidMgmtModal').classList.add('open');await refreshMaidList();}
 async function refreshMaidList(){const r=await api({action:'getMaids'});const box=$('maidMgmtList');if(!r.ok){box.innerHTML='<div style="color:var(--uncleaned)">로드 실패</div>';return;}const maids=r.maids||[];if(!maids.length){box.innerHTML='<div style="color:var(--text2);font-size:12px">등록된 메이드 없음</div>';return;}box.innerHTML='';maids.forEach(function(name){const row=document.createElement('div');row.className='maid-row';row.innerHTML='<span class="maid-row-name">👤 '+esc(name)+'</span>';const btn=document.createElement('button');btn.className='maid-del-btn';btn.textContent='삭제';btn.onclick=function(){removeMaid(name);};row.appendChild(btn);box.appendChild(row);});}
 async function addMaid(){const inp=$('newMaidInput');const name=inp.value.trim();if(!name)return;showLoad('추가 중...');const r=await api({action:'addMaid',name});hideLoad();if(r.ok){inp.value='';toast('✅ '+name+' 추가완료');await refreshMaidList();}else toast('추가 실패: '+(r.error||''));}
@@ -407,7 +411,7 @@ box.scrollTop=box.scrollHeight;
 async function sendMsg(){const inp=$('chatInput');const m=inp.value.trim();if(!m)return;inp.value='';try{await api({action:'sendChat',sender:S.name,role:S.role,message:m});await loadChat(true);}catch(e){toast('전송실패');}}
 function showTab(tab){document.querySelectorAll('.nav-tab').forEach((t,i)=>t.classList.toggle('active',(tab==='rooms')===(i===0)));$('tabRooms').style.display=tab==='rooms'?'block':'none';$('tabChat').style.display=tab==='chat'?'block':'none';if(tab==='chat'){S.chatSince=null;$('chatMsgs').innerHTML='';loadChat();}}
 function fmt(iso){if(!iso)return'';return new Date(iso).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});}
-// ── 브라우저 알림 ──────────────────────────
+
 function requestNotifPermission(){
 if(!('Notification' in window)){toast('이 브라우저는 알림을 지원하지 않습니다');return;}
 Notification.requestPermission().then(function(perm){
@@ -434,9 +438,7 @@ if(bar)bar.classList.add('show');
 function sendChatNotif(msg){
 if(!('Notification' in window))return;
 if(Notification.permission!=='granted')return;
-if(document.visibilityState==='visible'){
-return;
-}
+if(document.visibilityState==='visible')return;
 const senderLabel = msg.role==='admin'?'관리자':'메이드';
 new Notification('💬 '+msg.sender+' ('+senderLabel+')',{
 body: msg.message.length>60 ? msg.message.substring(0,60)+'…' : msg.message,
@@ -444,7 +446,6 @@ icon:'/housekeeping/favicon.ico',
 tag:'hk-chat'
 });
 }
-// ────────────────────────────────────────────
 
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
