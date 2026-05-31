@@ -1,6 +1,8 @@
 const API = 'https://script.google.com/macros/s/AKfycbzEZj1UW3bejogNEuqmThCZNPlFdqXhq2zmlHI-D8cFgLFszs9G3Zcb4EFau1NyJl6D/exec';
 let S = {
 role:null, name:'', rooms:[], filter:'all',
+room:null, status:null, chatSince:null,
+selectMode:false, selected:new Set(),
 assignMode:false, assignSelected:new Set()
 };
 let timer = null;
