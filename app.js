@@ -1,7 +1,6 @@
 const API = 'https://script.google.com/macros/s/AKfycbzEZj1UW3bejogNEuqmThCZNPlFdqXhq2zmlHI-D8cFgLFszs9G3Zcb4EFau1NyJl6D/exec';
 let S = {
 role:null, name:'', rooms:[], filter:'all',
-selectMode:false, selected:new Set(),
 assignMode:false, assignSelected:new Set()
 };
 let timer = null;
@@ -390,7 +389,7 @@ maidHtml=maidNames.map(function(name,idx){
 const mc=getMaidColorIdx(name);
 const color=mc>=0?MAID_COLORS[mc]:null;
 return '<div class="room-maid-badge"'+(color?' style="background:'+color+'22;color:'+color+';border-color:'+color+'44"':'')+'>'
-+'<span class="maid-dot"'+(color?' style="background:'+color+'"':'')+'>'+</span>'+esc(name)+'</div>';
++'<span class="maid-dot"'+(color?' style="background:'+color+'"':'')+'>'+'</span>'+esc(name)+'</div>';
 }).join('');
 }
 
