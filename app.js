@@ -315,6 +315,19 @@ $('notesList').innerHTML=r.notes.slice().reverse().map(n=>
 $('notesList').innerHTML='<div style="color:var(--text2);font-size:12px">메모 없음</div>';
 }
 }catch(e){}
+  // 변경 이력 로드
+  try{
+    const rh=await api({action:'getRoomHistory',roomNo:no,limit:5});
+    const hl=$('historyList');
+    if(hl){
+      if(rh.ok&&rh.history&&rh.history.length){
+        const KR_S={occupied:'재실',uncleaned:'미정비',cleaning:'정비중',inspection:'인스펝션필요',vacant:'공실완료',broken:'고장',cleaned:'인스펝션필요'};
+        hl.innerHTML=rh.history.map(h=>'<div class="note-item"><div class="note-meta">'+esc(h.changedBy||'?')+' · '+fmt(h.timestamp)+'</div>'+(KR_S[h.fromStatus]||h.fromStatus||'?')+' → '+(KR_S[h.toStatus]||h.toStatus||'?')+'</div>').join('');
+      }else{
+        hl.innerHTML='<div style="color:var(--text2);font-size:13px">이력 없음</div>';
+      }
+    }
+  }catch(e){}
 }
 
 function closeModal(e){if(e.target.id==='roomModal'){$('roomModal').classList.remove('open');S.room=null;}}
