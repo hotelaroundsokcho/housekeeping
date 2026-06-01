@@ -175,7 +175,7 @@ card.innerHTML='<div class="maid-stat-name">'+esc(name)+'</div>'+
 box.appendChild(card);
 });
 }
-// ───────── 일괄 체크아웃 선택 모드 ─────────
+// ───────── 일괄 상태변경 선택 모드 ─────────
 function toggleSelectMode(){
 if(S.assignMode) toggleAssignMode();
 S.selectMode=!S.selectMode;
@@ -188,7 +188,7 @@ btn.style.borderColor='rgba(245,158,11,.4)';
 btn.style.color='var(--cleaning)';
 $('bulkBar').style.display='flex';
 }else{
-btn.textContent='☑ 객실 선택 (일괄 체크아웃)';
+btn.textContent='☑ 객실 선택 (일괄 상태변경)';
 btn.style.background='rgba(59,130,246,.1)';
 btn.style.borderColor='rgba(59,130,246,.3)';
 btn.style.color='var(--occupied)';
@@ -206,24 +206,28 @@ updateBulkBar();render();
 function updateBulkBar(){
 const cnt=S.selected.size;
 $('bulkCount').textContent=cnt+'개 선택됨';
-$('bulkBtn').disabled=cnt===0;
-$('bulkBtn').style.opacity=cnt===0?'0.4':'1';
+document.querySelectorAll('.bulk-status-btn').forEach(function(b){
+b.disabled=cnt===0;
+b.style.opacity=cnt===0?'0.35':'1';
+});
 }
 
-async function bulkCheckout(){
+async function bulkSetStatus(status){
+const KR_LABEL={occupied:'재실',uncleaned:'미정비',cleaning:'정비중',inspection:'인스펙션필요',vacant:'공실완료',broken:'고장'};
 const cnt=S.selected.size;if(!cnt)return;
-if(!confirm(cnt+'개 객실을 미정비(체크아웃)로 등록합니다.\n계속하시겠습니까?'))return;
+const label=KR_LABEL[status]||status;
+if(!confirm(cnt+'개 객실을 ['+label+']로 변경합니다.\n계속하시겠습니까?'))return;
 const rooms=[...S.selected];
 toggleSelectMode();
 showLoad('0 / '+cnt+' 처리 중...');
 let done=0;
 for(const roomNo of rooms){
-await api({action:'updateRoom',roomNo,status:'uncleaned',updaterName:S.name,updaterRole:S.role});
+await api({action:'updateRoom',roomNo,status,updaterName:S.name,updaterRole:S.role});
 done++;
 $('loadingMsg').textContent=done+' / '+cnt+' 처리 중...';
 }
 await loadRooms(true);hideLoad();
-toast('✅ '+cnt+'개 객실 미정비 등록 완료');
+toast('✅ '+cnt+'개 객실 → '+label+' 일괄 적용 완료');
 }
 
 // ───────── 메이드 일괄 배정 모드 ─────────
