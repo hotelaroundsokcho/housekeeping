@@ -216,7 +216,7 @@ function selectAllVisible(){
   if(S.filter!=='all')rooms=rooms.filter(x=>x.status===S.filter);
   if(S.role==='maid')rooms=rooms.filter(x=>!x.maidName||x.maidName===S.name);
   rooms.forEach(r=>S.selected.add(String(r.roomNo)));
-  updateBulkCount();
+  updateBulkBar();
   render();
 }
 
