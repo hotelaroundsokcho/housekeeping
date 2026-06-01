@@ -186,14 +186,14 @@ btn.textContent='✖ 선택 취소';
 btn.style.background='rgba(245,158,11,.15)';
 btn.style.borderColor='rgba(245,158,11,.4)';
 btn.style.color='var(--cleaning)';
-$('bulkBar').style.display='flex';
+$('bulkBar').style.display='flex';const sab=$('selectAllBtn');if(sab)sab.style.display='inline-block';
 }else{
 btn.textContent='☑ 객실 선택 (일괄 상태변경)';
 btn.style.background='rgba(59,130,246,.1)';
 btn.style.borderColor='rgba(59,130,246,.3)';
 btn.style.color='var(--occupied)';
 $('bulkBar').style.display='none';
-}
+}const sab2=$('selectAllBtn');if(sab2)sab2.style.display='none';
 updateBulkBar();render();
 }
 
