@@ -174,7 +174,21 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 .bulk-assign-top{display:flex;align-items:center;justify-content:space-between;}
 .assign-count{font-size:13px;color:var(--text2);font-weight:600;}
 .assign-maid-btns{display:flex;gap:8px;flex-wrap:wrap;}
+
+/* ── 업무일지 모달 ── */
+.report-btn{width:100%;padding:10px;background:rgba(250,204,21,.1);border:1px solid rgba(250,204,21,.3);color:#facc15;border-radius:var(--radius);font-size:13px;cursor:pointer;margin-bottom:10px;}
+.report-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:400;align-items:center;justify-content:center;padding:16px;}
+.report-modal-overlay.open{display:flex;}
+.report-modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);width:100%;max-width:420px;padding:24px;max-height:90vh;overflow-y:auto;}
+.report-modal h3{font-size:16px;font-weight:700;margin-bottom:16px;color:var(--text);}
+.report-date-row{display:flex;gap:8px;align-items:center;margin-bottom:16px;flex-wrap:wrap;}
+.report-date-row label{font-size:12px;color:var(--text2);}
+.report-date-input{background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px 10px;font-size:13px;flex:1;min-width:120px;}
+.report-btn-row{display:flex;gap:8px;margin-top:4px;}
+.report-dl-btn{flex:1;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;}
+.report-cancel-btn{padding:12px 16px;background:transparent;border:1px solid var(--border);border-radius:10px;color:var(--text2);font-size:14px;cursor:pointer;}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 <div id="loginScreen">
@@ -252,6 +266,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 <button class="maid-mgmt-btn" id="maidMgmtBtn" style="display:none" onclick="openMaidMgmtModal()">👥 메이드 명단 관리</button>
 <button class="change-pin-btn" id="changePinBtn" style="display:none" onclick="openChangePinModal()">🔑 관리자 PIN 변경</button>
 <div class="rooms-grid" id="roomsGrid"></div>
+<div id="reportBtn" style="display:none"><button class="report-btn" onclick="openReportModal()">📋 업무일지 다운로드</button></div>
 </div>
 <div id="tabChat" style="display:none">
 <div class="chat-wrap">
@@ -323,7 +338,22 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 <button class="pin-cancel-btn" onclick="closeChangePinModal()">취소</button>
 </div>
 </div>
-<div class="loading-overlay" id="loadingOv" style="display:none"><div class="loading-box"><div class="spinner"></div><p id="loadingMsg">처리 중...</p></div></div>
+<div<div class="report-modal-overlay" id="reportModal">
+<div class="report-modal">
+  <h3>📋 업무일지 다운로드</h3>
+  <div class="report-date-row">
+    <label>시작일</label>
+    <input type="date" class="report-date-input" id="reportFrom">
+    <label>종료일</label>
+    <input type="date" class="report-date-input" id="reportTo">
+  </div>
+  <div class="report-btn-row">
+    <button class="report-dl-btn" onclick="downloadReport()">⬇ 엑셀 다운로드</button>
+    <button class="report-cancel-btn" onclick="closeReportModal()">취소</button>
+  </div>
+</div>
+</div>
+ class="loading-overlay" id="loadingOv" style="display:none"><div class="loading-box"><div class="spinner"></div><p id="loadingMsg">처리 중...</p></div></div>
 <div class="toast" id="toast"></div>
 <script src="app.js"></script>
 </body>
