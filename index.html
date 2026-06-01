@@ -186,6 +186,18 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 .report-btn-row{display:flex;gap:8px;margin-top:4px;}
 .report-dl-btn{flex:1;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;}
 .report-cancel-btn{padding:12px 16px;background:transparent;border:1px solid var(--border);border-radius:10px;color:var(--text2);font-size:14px;cursor:pointer;}
+
+/* ── 일괄 상태변경 바 ── */
+.bulk-bar{flex-direction:column;gap:8px;padding:12px 14px;}
+.bulk-bar-top{display:flex;align-items:center;justify-content:center;}
+.bulk-status-btns{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;}
+.bulk-status-btn{flex:1 1 calc(33% - 7px);min-width:80px;padding:9px 6px;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;transition:opacity .2s;}
+.bulk-s-occupied{background:rgba(244,114,182,.25);color:#f9a8d4;}
+.bulk-s-uncleaned{background:rgba(239,68,68,.25);color:#fca5a5;}
+.bulk-s-cleaning{background:rgba(245,158,11,.25);color:#fde68a;}
+.bulk-s-inspection{background:rgba(148,163,184,.2);color:#e2e8f0;}
+.bulk-s-vacant{background:rgba(74,222,128,.2);color:#86efac;}
+.bulk-s-broken{background:rgba(255,107,53,.25);color:#fdba74;}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
@@ -259,7 +271,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 <button class="filter-btn" data-filter="vacant" onclick="setFilter('vacant')">💙 공실완료 / Vacant</button>
 <button class="filter-btn" data-filter="broken" onclick="setFilter('broken')">🔶 고장 / Broken</button>
 </div>
-<button class="select-mode-btn" id="selectModeBtn" style="display:none" onclick="toggleSelectMode()">☑ 객실 선택 (일괄 체크아웃)</button>
+<button class="select-mode-btn" id="selectModeBtn" style="display:none" onclick="toggleSelectMode()">☑ 객실 선택 (일괄 상태변경)</button>
 <button class="assign-mode-btn" id="assignModeBtn" style="display:none" onclick="toggleAssignMode()">👤 메이드 일괄 배정</button>
 <button class="reset-btn" id="resetBtn" style="display:none" onclick="confirmReset()">⚠️ 전체 초기화 (긴급용)</button>
 <button class="maid-mgmt-btn" id="maidMgmtBtn" style="display:none" onclick="openMaidMgmtModal()">👥 메이드 명단 관리</button>
@@ -278,8 +290,15 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 </div>
 </div>
 <div class="bulk-bar" id="bulkBar">
-<span class="bulk-count" id="bulkCount">0개 선택됨</span>
-<button class="bulk-btn" id="bulkBtn" onclick="bulkCheckout()" disabled>🔴 체크아웃 (미정비) 등록</button>
+<div class="bulk-bar-top"><span class="bulk-count" id="bulkCount">0개 선택됨</span></div>
+<div class="bulk-status-btns">
+<button class="bulk-status-btn bulk-s-occupied" onclick="bulkSetStatus('occupied')" disabled>💗 재실</button>
+<button class="bulk-status-btn bulk-s-uncleaned" onclick="bulkSetStatus('uncleaned')" disabled>🔴 미정비</button>
+<button class="bulk-status-btn bulk-s-cleaning" onclick="bulkSetStatus('cleaning')" disabled>🟡 정비중</button>
+<button class="bulk-status-btn bulk-s-inspection" onclick="bulkSetStatus('inspection')" disabled>⚪ 인스펙션</button>
+<button class="bulk-status-btn bulk-s-vacant" onclick="bulkSetStatus('vacant')" disabled>🟢 공실완료</button>
+<button class="bulk-status-btn bulk-s-broken" onclick="bulkSetStatus('broken')" disabled>🔶 고장</button>
+</div>
 </div>
 <div class="bulk-assign-bar" id="bulkAssignBar">
 <div class="bulk-assign-top"><span class="assign-count" id="assignCount">0개 객실 선택됨</span><span style="font-size:11px;color:var(--text2)">객실 선택 후 메이드 버튼 클릭</span></div>
