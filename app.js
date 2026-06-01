@@ -211,6 +211,14 @@ b.disabled=cnt===0;
 b.style.opacity=cnt===0?'0.35':'1';
 });
 }
+function selectAllVisible(){
+  let rooms=S.rooms;
+  if(S.filter!=='all')rooms=rooms.filter(x=>x.status===S.filter);
+  if(S.role==='maid')rooms=rooms.filter(x=>!x.maidName||x.maidName===S.name);
+  rooms.forEach(r=>S.selected.add(String(r.roomNo)));
+  updateBulkCount();
+  render();
+}
 
 async function bulkSetStatus(status){
 const KR_LABEL={occupied:'재실',uncleaned:'미정비',cleaning:'정비중',inspection:'인스펙션필요',vacant:'공실완료',broken:'고장'};
