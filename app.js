@@ -114,7 +114,7 @@ document.querySelectorAll('.admin-name-btn').forEach(b=>b.classList.remove('acti
 async function go(){
 $('loginScreen').style.display='none';$('app').style.display='flex';
 $('headerSub').textContent=S.role==='admin'?'관리자 모드':S.name+' 님';
-['resetBtn','maidSec','changePinBtn','maidMgmtBtn','maidStatsSection','selectModeBtn','assignModeBtn'].forEach(id=>{
+['resetBtn','maidSec','changePinBtn','maidMgmtBtn','reportBtn','maidStatsSection','selectModeBtn','assignModeBtn'].forEach(id=>{
 const el=$(id);if(el)el.style.display=S.role==='admin'?'block':'none';
 });
 showLoad('로딩 중...');
@@ -573,3 +573,100 @@ const role=sessionStorage.getItem('hk_role');
 const name=sessionStorage.getItem('hk_name');
 if(role&&name){S.role=role;S.name=name;go();}
 })();
+
+// ── 업무일지 다운로드 ──
+function openReportModal(){
+const today=new Date().toISOString().slice(0,10);
+$('reportFrom').value=today;
+$('reportTo').value=today;
+$('reportModal').classList.add('open');
+}
+function closeReportModal(){$('reportModal').classList.remove('open');}
+
+async function downloadReport(){
+const from=$('reportFrom').value;
+const to=$('reportTo').value;
+if(!from||!to){toast('날짜를 선택하세요');return;}
+showLoad('업무일지 생성 중...');
+try{
+const r=await api({action:'getReportData',dateFrom:from,dateTo:to});
+if(!r.ok){hideLoad();toast('데이터 로드 실패');return;}
+const KR_S={occupied:'재실',uncleaned:'미정비',cleaning:'정비중',
+inspection:'인스펙션필요',vacant:'공실완료',broken:'고장',cleaned:'인스펙션필요'};
+const tally={};
+r.rooms.forEach(function(rm){
+if(!rm.maidName)return;
+rm.maidName.split(',').map(function(n){return n.trim();}).filter(Boolean).forEach(function(name){
+if(!tally[name])tally[name]={done:0,wip:0,total:0};
+const st=rm.status==='cleaned'?'inspection':rm.status;
+if(['uncleaned','cleaning','inspection','vacant'].includes(st)){
+tally[name].total++;
+if(st==='inspection'||st==='vacant')tally[name].done++;
+if(st==='cleaning')tally[name].wip++;
+}
+});
+});
+const sc={occupied:0,uncleaned:0,cleaning:0,inspection:0,vacant:0,broken:0};
+r.rooms.forEach(function(rm){
+const st=rm.status==='cleaned'?'inspection':rm.status;
+if(sc[st]!==undefined)sc[st]++;
+});
+const summary=[
+['호텔 어라운드 속초 — 업무일지'],
+['기간',from+' ~ '+to],
+['생성일시',new Date().toLocaleString('ko-KR')],
+[],
+['[ 객실 현황 ]'],
+['재실','미정비','정비중','인스펙션필요','공실완료','고장'],
+[sc.occupied,sc.uncleaned,sc.cleaning,sc.inspection,sc.vacant,sc.broken],
+[],
+['[ 메이드별 현황 ]'],
+['이름','완료','정비중','담당합계','완료율']
+].concat(Object.entries(tally).map(function(e){
+const name=e[0],d=e[1];
+return [name,d.done,d.wip,d.total,d.total?Math.round(d.done/d.total*100)+'%':'0%'];
+}));
+const noteMap={};
+r.notes.forEach(function(n){
+if(!noteMap[n.roomNo])noteMap[n.roomNo]=[];
+const t=n.timestamp?new Date(n.timestamp).toLocaleString('ko-KR',{hour:'2-digit',minute:'2-digit'}):'';
+noteMap[n.roomNo].push('['+t+'] '+n.sender+': '+n.note);
+});
+const detail=[
+['객실번호','타입코드','타입명','현재상태','담당메이드','마지막변경','메모']
+].concat(r.rooms.map(function(rm){
+return [
+rm.roomNo,rm.typeCode,rm.typeName,
+KR_S[rm.status]||rm.status,
+rm.maidName||'미배정',
+rm.updatedAt?new Date(rm.updatedAt).toLocaleString('ko-KR'):'',
+(noteMap[rm.roomNo]||[]).join(' | ')
+];
+}));
+const hist=[
+['변경시각','객실번호','이전상태','변경후상태','변경자','역할']
+].concat(r.history.map(function(h){
+return [
+h.timestamp?new Date(h.timestamp).toLocaleString('ko-KR'):'',
+h.roomNo,
+KR_S[h.fromStatus]||h.fromStatus||'',
+KR_S[h.toStatus]||h.toStatus||'',
+h.changedBy||'',
+h.role==='admin'?'관리자':'메이드'
+];
+}));
+const wb=XLSX.utils.book_new();
+const ws1=XLSX.utils.aoa_to_sheet(summary);
+ws1['!cols']=[{wch:20},{wch:12},{wch:12},{wch:14},{wch:14},{wch:10}];
+XLSX.utils.book_append_sheet(wb,ws1,'업무요약');
+const ws2=XLSX.utils.aoa_to_sheet(detail);
+ws2['!cols']=[{wch:10},{wch:10},{wch:24},{wch:14},{wch:16},{wch:18},{wch:40}];
+XLSX.utils.book_append_sheet(wb,ws2,'객실상세');
+const ws3=XLSX.utils.aoa_to_sheet(hist);
+ws3['!cols']=[{wch:18},{wch:10},{wch:14},{wch:14},{wch:12},{wch:8}];
+XLSX.utils.book_append_sheet(wb,ws3,'변경이력');
+const fname='HK_업무일지_'+from+(from!==to?'~'+to:'')+'.xlsx';
+XLSX.writeFile(wb,fname);
+hideLoad();closeReportModal();toast('✅ 다운로드 완료');
+}catch(e){hideLoad();toast('오류: '+e.message);}
+}
