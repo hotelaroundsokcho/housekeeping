@@ -373,7 +373,7 @@ let rooms=S.rooms.map(r=>r.status==='cleaned'?{...r,status:'inspection'}:r);
 if(S.filter!=='all')rooms=rooms.filter(x=>x.status===S.filter);
 if(S.role==='maid'){
 rooms=rooms.filter(x=>x.status!=='occupied'&&x.status!=='vacant'&&x.status!=='broken');
-rooms=rooms.filter(x=>!x.maidName||x.maidName.split(',').map(n=>n.trim()).includes(S.name));
+rooms=rooms.filter(x=>x.maidName&&x.maidName.split(',').map(n=>n.trim()).includes(S.name));
 }
 const grid=$('roomsGrid');grid.innerHTML='';
   if(S.role==='maid'&&rooms.length===0){grid.innerHTML='<div style="color:var(--text2);text-align:center;padding:40px 20px;font-size:14px">배정된 객실이 없습니다.<br><small>Waiting for room assignment</small></div>';return;}
