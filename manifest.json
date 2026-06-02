@@ -1,0 +1,25 @@
+{
+  "name": "호텔어라운드속초 객실정비",
+  "short_name": "객실정비",
+  "description": "Hotel Around Sokcho Housekeeping Management",
+  "start_url": "/housekeeping/",
+  "scope": "/housekeeping/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f1117",
+  "theme_color": "#0f1117",
+  "icons": [
+    {
+      "src": "/housekeeping/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/housekeeping/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
