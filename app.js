@@ -2,7 +2,6 @@ const API = 'https://script.google.com/macros/s/AKfycbzEZj1UW3bejogNEuqmThCZNPlF
 let S = {
 role:null, name:'', rooms:[], filter:'all',
 room:null, status:null, chatSince:null,
-selectMode:false, selected:new Set(),
 assignMode:false, assignSelected:new Set()
 };
 let timer = null;
@@ -465,8 +464,7 @@ const rh=await api({action:'getRoomHistory',roomNo:no,limit:5});
 const hl=$('historyList');
 if(hl){
 if(rh.ok&&rh.history&&rh.history.length){
-const KR_S={occupied:'재실',uncleaned:'미정비',cleaning:'정비중',inspection:'인스펙션필요',vacant:'공실완료',broken:'고장',cleaned:'인스펙션필요'};
-hl.innerHTML=rh.history.map(h=>'<div class="note-item"><div class="note-meta">'+esc(h.changedBy||'?')+' · '+fmt(h.timestamp)+'</div>'+(KR_S[h.fromStatus]||h.fromStatus||'?')+' → '+(KR_S[h.toStatus]||h.toStatus||'?')+'</div>').join('');
+hl.innerHTML=rh.history.map(h=>'<div class="note-item"><div class="note-meta">'+esc(h.changedBy||'?')+' · '+fmt(h.timestamp)+'</div>'+(KR[h.fromStatus]||h.fromStatus||'?')+' → '+(KR[h.toStatus]||h.toStatus||'?')+'</div>').join('');
 }else{
 hl.innerHTML='<div style="color:var(--text2);font-size:13px">이력 없음</div>';
 }
