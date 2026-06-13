@@ -2,7 +2,7 @@ const API = 'https://script.google.com/macros/s/AKfycbzEZj1UW3bejogNEuqmThCZNPlF
 let S = {
 role:null, name:'', rooms:[], filter:'all',
 room:null, status:null, chatSince:null,
-selectMode:false, selected:new Set(),
+isInspector:false, selectMode:false, selected:new Set(),
 assignMode:false, assignSelected:new Set()
 };
 let timer = null;
@@ -95,8 +95,8 @@ const r=await api({action:'verifyMaid',name:n});
 hideLoad();
 if(r.ok){
 const canonName=r.name||n;
-S.role='maid';S.name=canonName;
-sessionStorage.setItem('hk_role','maid');sessionStorage.setItem('hk_name',canonName);go();
+S.role='maid';S.name=canonName;S.isInspector=!!(r.isInspector);
+sessionStorage.setItem('hk_role','maid');sessionStorage.setItem('hk_name',canonName);sessionStorage.setItem('hk_inspector',r.isInspector?'1':'0');go();
 }else $('loginError').textContent=r.error||'등록되지 않은 이름입니다';
 }
 
@@ -114,7 +114,7 @@ document.querySelectorAll('.admin-name-btn').forEach(b=>b.classList.remove('acti
 async function go(){
 $('loginScreen').style.display='none';$('app').style.display='flex';
 $('headerSub').textContent=S.role==='admin'?'관리자 모드':S.name+' 님';
-['resetBtn','maidSec','changePinBtn','maidMgmtBtn','reportBtn','maidStatsSection','selectModeBtn','assignModeBtn'].forEach(id=>{
+['resetBtn','maidSec','changePinBtn','maidMgmtBtn','inspectorMgmtBtn','reportBtn','maidStatsSection','selectModeBtn','assignModeBtn'].forEach(id=>{
 const el=$(id);if(el)el.style.display=S.role==='admin'?'block':'none';
 });
 showLoad('로딩 중...');
@@ -214,7 +214,7 @@ b.style.opacity=cnt===0?'0.35':'1';
 function selectAllVisible(){
   let rooms=S.rooms;
   if(S.filter!=='all')rooms=rooms.filter(x=>x.status===S.filter);
-  if(S.role==='maid')rooms=rooms.filter(x=>x.maidName===S.name);
+  if(S.role==='maid')rooms=rooms.filter(x=>x.maidName&&x.maidName.split(',').map(n=>n.trim().toLowerCase()).includes(S.name.toLowerCase()));
   rooms.forEach(r=>S.selected.add(String(r.roomNo)));
   updateBulkBar();
   render();
@@ -373,7 +373,7 @@ let rooms=S.rooms.map(r=>r.status==='cleaned'?{...r,status:'inspection'}:r);
 if(S.filter!=='all')rooms=rooms.filter(x=>x.status===S.filter);
 if(S.role==='maid'){
 rooms=rooms.filter(x=>x.status!=='occupied'&&x.status!=='vacant'&&x.status!=='broken');
-rooms=rooms.filter(x=>x.maidName&&x.maidName.split(',').map(n=>n.trim()).includes(S.name));
+rooms=rooms.filter(x=>x.maidName&&x.maidName.split(',').map(n=>n.trim().toLowerCase()).includes(S.name.toLowerCase()));
 }
 const grid=$('roomsGrid');grid.innerHTML='';
   if(S.role==='maid'&&rooms.length===0){grid.innerHTML='<div style="color:var(--text2);text-align:center;padding:40px 20px;font-size:14px">배정된 객실이 없습니다.<br><small>Waiting for room assignment</small></div>';return;}
@@ -446,7 +446,9 @@ modalTime.textContent=ts?'마지막 변경: '+ts:'';
 }
 updBtns();
 document.querySelectorAll('.status-btn-admin').forEach(b=>{
-b.style.display=S.role==='admin'?'':'';
+const _isSelfInspect=S.role==='maid'&&S.room&&S.room.maidName&&S.room.maidName.split(',').map(n=>n.trim().toLowerCase()).includes(S.name.toLowerCase())&&S.room.status==='inspection';
+const _showAdmin=S.role==='admin'||(b.dataset.status==='vacant'&&(S.isInspector||_isSelfInspect));
+b.style.display=_showAdmin?'':'none';
 });
 $('notesList').innerHTML='<div style="color:var(--text2);font-size:12px">로딩중...</div>';
 $('roomModal').classList.add('open');
@@ -500,9 +502,12 @@ if(m!==(S.room.maidName||''))calls.push(api({action:'assignMaid',roomNo:S.room.r
 const n=$('noteInput').value.trim();
 if(n)calls.push(api({action:'addRoomNote',roomNo:S.room.roomNo,sender:S.name,role:S.role,note:n}));
 await Promise.all(calls);
-if(S.role==='admin'&&prevStatus==='inspection'&&S.status==='vacant'&&S.room.maidName){
-await api({action:'sendChat',sender:'관리자',role:'admin',
-message:'✅ '+S.room.roomNo+'호 점검 통과! 공실완료 정체되었습니다. ('+S.room.maidName+' 님 수고하셨습니다 👍)'});
+const _canInspect=S.role==='admin'||(S.role==='maid'&&(S.isInspector||(S.room.maidName&&S.room.maidName.split(',').map(n=>n.trim().toLowerCase()).includes(S.name.toLowerCase()))));
+if(_canInspect&&prevStatus==='inspection'&&S.status==='vacant'){
+const _chatSender=S.role==='admin'?'관리자':S.name;
+const _chatMsg=(S.role==='admin'&&S.room.maidName)?'✅ '+S.room.roomNo+'호 점검 통과 / Inspection Passed! 공실완료 / Vacant, 체크인 준비완료 / Ready for Check-in. ('+S.room.maidName+' 님 수고하셨습니다 👍)':'✅ '+S.room.roomNo+'호 인스펙션 완료 / Inspection Done! 공실완료 / Vacant. (담당: '+S.name+')';
+await api({action:'sendChat',sender:_chatSender,role:S.role,message:_chatMsg});
+await api({action:'assignMaid',roomNo:S.room.roomNo,maidName:''});
 }
 await loadRooms(true);hideLoad();
 $('roomModal').classList.remove('open');toast('✅ 저장완료');
@@ -583,7 +588,7 @@ function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').repl
 (function restoreSession(){
 const role=sessionStorage.getItem('hk_role');
 const name=sessionStorage.getItem('hk_name');
-if(role&&name){S.role=role;S.name=name;go();}
+if(role&&name){S.role=role;S.name=name;S.isInspector=sessionStorage.getItem('hk_inspector')==='1';go();}
 })();
 
 // ── 업무일지 다운로드 ──
@@ -681,4 +686,42 @@ const fname='HK_업무일지_'+from+(from!==to?'~'+to:'')+'.xlsx';
 XLSX.writeFile(wb,fname);
 hideLoad();closeReportModal();toast('✅ 다운로드 완료');
 }catch(e){hideLoad();toast('오류: '+e.message);}
+}
+
+async function openInspectorModal(){
+  const box=$('inspectorList');
+  if(box)box.innerHTML='<div style="color:var(--text2);font-size:12px">로딩중...</div>';
+  $('inspectorModal').classList.add('open');
+  await refreshInspectorList();
+}
+function closeInspectorModal(e){
+  if(!e||e.target.id==='inspectorModal')$('inspectorModal').classList.remove('open');
+}
+async function refreshInspectorList(){
+  const r=await api({action:'getInspectors'});
+  const rm=await api({action:'getMaids'});
+  const box=$('inspectorList');
+  if(!box)return;
+  const inspectors=r.ok?(r.inspectors||[]):[];
+  const maids=rm.ok?(rm.maids||[]):[];
+  if(!maids.length){box.innerHTML='<div style="color:var(--text2);font-size:12px">등록된 메이드 없음</div>';return;}
+  box.innerHTML='';
+  maids.forEach(function(name){
+    const isIns=inspectors.map(n=>n.toLowerCase()).includes(name.toLowerCase());
+    const row=document.createElement('div');
+    row.className='maid-row';
+    row.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)';
+    row.innerHTML='<span style="font-size:14px">👤 '+esc(name)+'</span>';
+    const tog=document.createElement('button');
+    tog.style.cssText='padding:6px 14px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:600;transition:all 0.2s;background:'+(isIns?'var(--vacant)':'var(--surface2)')+';color:'+(isIns?'#000':'var(--text2)');
+    tog.textContent=isIns?'ON ✓':'OFF';
+    tog.onclick=async function(){
+      showLoad('저장 중...');
+      await api({action:'setInspector',maidName:name,enable:!isIns});
+      hideLoad();
+      await refreshInspectorList();
+    };
+    row.appendChild(tog);
+    box.appendChild(row);
+  });
 }
