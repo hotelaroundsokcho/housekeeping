@@ -275,6 +275,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 <button class="assign-mode-btn" id="assignModeBtn" style="display:none" onclick="toggleAssignMode()">👤 메이드 일괄 배정</button>
 <button class="reset-btn" id="resetBtn" style="display:none" onclick="confirmReset()">⚠️ 전체 초기화 (긴급용)</button>
 <button class="maid-mgmt-btn" id="maidMgmtBtn" style="display:none" onclick="openMaidMgmtModal()">👥 메이드 명단 관리</button>
+<button class="maid-mgmt-btn" id="inspectorMgmtBtn" style="display:none" onclick="openInspectorModal()">🔎 인스펙터 관리</button>
 <button class="change-pin-btn" id="changePinBtn" style="display:none" onclick="openChangePinModal()">🔑 관리자 PIN 변경</button>
 <div class="rooms-grid" id="roomsGrid"></div>
 <div id="reportBtn" style="display:none"><button class="report-btn" onclick="openReportModal()">📋 업무일지 다운로드</button></div>
@@ -325,7 +326,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 <div class="modal-section"><label>메모 추가</label><textarea class="note-input" id="noteInput" placeholder="특이사항..."></textarea></div>
 <div class="modal-section"><label>메모 이력</label><div class="notes-list" id="notesList"></div></div>
 <div class="notes-section" style="margin-top:14px"><div class="notes-label" style="font-size:13px;color:var(--text2);margin-bottom:6px">변경 이력 / History</div><div id="historyList"></div></div>
-<button class="modal-save-btn" onclick="saveRoom()">저장</button>
+<button class="modal-save-btn" onclick="saveRoom()">저장 / Save</button>
 </div>
 </div>
 <div class="modal-overlay" id="maidMgmtModal" onclick="closeMaidMgmtModal(event)">
@@ -339,6 +340,14 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 <button class="maid-add-btn" onclick="addMaid()">추가</button>
 </div>
 <button class="pin-cancel-btn" style="margin-top:16px" onclick="closeMaidMgmtModal()">닫기</button>
+</div>
+</div>
+<div class="modal-overlay" id="inspectorModal" onclick="closeInspectorModal(event)">
+<div class="modal-box" style="max-width:360px">
+<div class="modal-title">🔎 인스펙터 관리 / Inspector</div>
+<div style="font-size:12px;color:var(--text2);margin-bottom:12px">관리자가 ON하면 해당 메이드가 오늘 인스펙션 권한을 가집니다. 매일 자동 초기화됩니다.<br>Admin grants temporary inspection rights. Auto-reset daily.</div>
+<div id="inspectorList"><div style="color:var(--text2);font-size:12px">로딩중...</div></div>
+<button class="btn-primary" style="margin-top:16px" onclick="closeInspectorModal()">닫기 / Close</button>
 </div>
 </div>
 <div class="modal-overlay" id="changePinModal" onclick="closeChangePinModal(event)">
