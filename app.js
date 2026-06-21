@@ -372,23 +372,23 @@ function fmtCardTime(iso){
 if(!iso)return'';
 const d=new Date(iso);
 const now=new Date();
-const isToday=d.toLocaleDateString('ko-KR')===now.toLocaleDateString('ko-KR');
+const isToday=d.toLocaleDateString('ko-KR',{timeZone:'Asia/Seoul'})===now.toLocaleDateString('ko-KR',{timeZone:'Asia/Seoul'});
 if(isToday){
-return d.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+return d.toLocaleTimeString('ko-KR',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit'});
 }else{
-return d.toLocaleDateString('ko-KR',{month:'numeric',day:'numeric'})+' '+d.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+return d.toLocaleDateString('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric'})+' '+d.toLocaleTimeString('ko-KR',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit'});
 }
 }
 const MAID_COLORS = ['#06b6d4','#a78bfa','#fb923c','#f472b6','#facc15'];
 
 const STATUS_CARD_THEME = {
-occupied: {bg:'#3d1a2e', border:'#f472b6', numColor:'#fce7f3', dimColor:'#f9a8d4'},
-uncleaned: {bg:'#3d0f0f', border:'#ef4444', numColor:'#fee2e2', dimColor:'#fca5a5'},
-cleaning: {bg:'#3d2a00', border:'#f59e0b', numColor:'#fef3c7', dimColor:'#fde68a'},
-inspection: {bg:'#1e2535', border:'#94a3b8', numColor:'#e2e8f0', dimColor:'#94a3b8'},
-vacant: {bg:'#0d2e1a', border:'#4ade80', numColor:'#dcfce7', dimColor:'#86efac'},
-broken: {bg:'#2e1a0a', border:'#ff6b35', numColor:'#ffedd5', dimColor:'#fdba74'},
-cleaned: {bg:'#1e2535', border:'#94a3b8', numColor:'#e2e8f0', dimColor:'#94a3b8'}
+occupied: {bg:'#fce7f3', border:'#f472b6', numColor:'#500724', dimColor:'#831843'},
+uncleaned: {bg:'#fee2e2', border:'#ef4444', numColor:'#450a0a', dimColor:'#7f1d1d'},
+cleaning: {bg:'#fef9c3', border:'#fde047', numColor:'#422006', dimColor:'#713f12'},
+inspection: {bg:'#ede9fe', border:'#94a3b8', numColor:'#2e1065', dimColor:'#3b0764'},
+vacant: {bg:'#dcfce7', border:'#4ade80', numColor:'#052e16', dimColor:'#14532d'},
+broken: {bg:'#ffedd5', border:'#ff6b35', numColor:'#431407', dimColor:'#7c2d12'},
+cleaned: {bg:'#ede9fe', border:'#94a3b8', numColor:'#3b0764', dimColor:'#4c1d95'}
 };
 
 function render(){
@@ -680,7 +680,7 @@ function renderTodayInspectorBar(){
   if(!bar)return;
   bar.style.display=S.role==='admin'?'flex':'none';
   const inspectors=S.maids.filter(m=>m);
-  bar.innerHTML='<span style="color:var(--text2);font-size:13px;margin-right:8px;">🔍 오늘의 인스펝터:</span>'+
+  bar.innerHTML='<span style="color:var(--text2);font-size:13px;margin-right:8px;">🔍 오늘의 인스펙터:</span>'+
     inspectors.map(function(name){
       const active=S.todayInspector===name;
       return '<button'+(active?' style="background:var(--accent);color:#fff;border:1px solid var(--accent);border-radius:20px;padding:4px 14px;font-size:13px;cursor:pointer;margin-right:6px;"':' style="background:var(--surface2);color:var(--text2);border:1px solid var(--border);border-radius:20px;padding:4px 14px;font-size:13px;cursor:pointer;margin-right:6px;"')+' onclick="setTodayInspectorUI(\''+name+'\')">'  +(name[0].toUpperCase()+name.slice(1))+'</button>';
@@ -694,7 +694,7 @@ function renderTodayInspectorBar(){
 }
 async function setTodayInspectorUI(name){
   const r=await api({action:'setTodayInspector',inspector:name});
-  if(r.ok){S.todayInspector=name;renderTodayInspectorBar();toast(name?'인스펝터: '+name+' 지정':'인스펝터 해제');}
+  if(r.ok){S.todayInspector=name;renderTodayInspectorBar();toast(name?'인스펙터: '+name+' 지정':'인스펙터 해제');}
   else toast('오류');
 }
 async function confirmReset(){
@@ -741,7 +741,7 @@ box.scrollTop=box.scrollHeight;
 }
 async function sendMsg(){const inp=$('chatInput');const m=inp.value.trim();if(!m)return;inp.value='';try{await api({action:'sendChat',sender:S.name,role:S.role,message:m});await loadChat(true);}catch(e){toast('전송실패');}}
 function showTab(tab){document.querySelectorAll('.nav-tab').forEach((t,i)=>t.classList.toggle('active',(tab==='rooms')===(i===0)));$('tabRooms').style.display=tab==='rooms'?'block':'none';$('tabChat').style.display=tab==='chat'?'block':'none';if(tab==='chat'){S.chatSince=null;$('chatMsgs').innerHTML='';loadChat();}}
-function fmt(iso){if(!iso)return'';return new Date(iso).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});}
+function fmt(iso){if(!iso)return'';return new Date(iso).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});}
 function requestNotifPermission(){
 if(!('Notification' in window)){toast('이 브라우저는 알림을 지원하지 않습니다');return;}
 Notification.requestPermission().then(function(perm){
@@ -1059,11 +1059,11 @@ $('reportFrom').value=fmt(w);$('reportTo').value=fmt(d);
 
 function fmtTime(ts){
 if(!ts)return'';
-return new Date(ts).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+return new Date(ts).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
 }
 function fmtTimeOnly(ts){
 if(!ts)return'';
-return new Date(ts).toLocaleString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+return new Date(ts).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit'});
 }
 function calcDuration(startTs,endTs){
 if(!startTs||!endTs)return'';
