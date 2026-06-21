@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <title>객실정비 | Hotel Around Sokcho</title>
 <style>
-:root{--bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2e3248;--accent:#6c8fff;--text:#e8eaf0;--text2:#8b91a8;--occupied:#f472b6;--uncleaned:#ef4444;--cleaning:#f59e0b;--inspection:#e2e8f0;--vacant:#4ade80;--broken:#ff6b35;--radius:12px;}
+:root{--bg:#f5f0e8;--surface:#ede8de;--surface2:#faf7f2;--border:#d6cfbe;--accent:#7c5c2e;--text:#2c2416;--text2:#7a6a52;--occupied:#be185d;--uncleaned:#dc2626;--cleaning:#b45309;--inspection:#6d28d9;--vacant:#15803d;--broken:#c2410c;--radius:12px;}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif;min-height:100vh;font-size:16px;}
 #loginScreen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px;}
@@ -12,7 +12,6 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 .logo h1{font-size:22px;font-weight:700;}
 .logo p{color:var(--text2);font-size:12px;margin-top:4px;}
 .login-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px 24px;width:100%;max-width:360px;}
-.tab-row{display:flex;gap:8px;margin-bottom:24px;}
 .tab-btn{flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text2);font-size:13px;cursor:pointer;}
 .tab-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600;}
 .form-group{margin-bottom:16px;}
@@ -53,8 +52,16 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 .maid-stat-bar{height:100%;background:var(--vacant);border-radius:4px;transition:width .4s ease;}
 .maid-stat-pct{font-size:10px;color:var(--text2);}
 .filter-row{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
-.filter-btn{padding:6px 11px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text2);font-size:13px;cursor:pointer;}
-.filter-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+.filter-btn{padding:6px 13px;border-radius:20px;border:2px solid transparent;background:#ede8de;color:#2c2416;font-size:13px;cursor:pointer;font-weight:600;transition:opacity .15s;}
+.filter-btn:hover{opacity:.85;}
+.filter-btn[data-filter='all']{background:#7c5c2e;border-color:#5c4321;color:#fff;}
+.filter-btn[data-filter='occupied']{background:#9d174d;border-color:#831843;color:#fff;}
+.filter-btn[data-filter='uncleaned']{background:#b91c1c;border-color:#7f1d1d;color:#fff;}
+.filter-btn[data-filter='cleaning']{background:#a16207;border-color:#713f12;color:#fff;}
+.filter-btn[data-filter='inspection']{background:#5b21b6;border-color:#3b0764;color:#fff;}
+.filter-btn[data-filter='vacant']{background:#15803d;border-color:#052e16;color:#fff;}
+.filter-btn[data-filter='broken']{background:#c2410c;border-color:#7c2d12;color:#fff;}
+.filter-btn.active{opacity:1;box-shadow:0 0 0 3px rgba(0,0,0,.15);}
 .select-mode-btn{width:100%;padding:11px;background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);color:var(--occupied);border-radius:var(--radius);font-size:13px;font-weight:600;cursor:pointer;margin-bottom:10px;}
 .reset-btn{width:100%;padding:11px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:var(--uncleaned);border-radius:var(--radius);font-size:13px;cursor:pointer;margin-bottom:10px;}
 .change-pin-btn{width:100%;padding:10px;background:rgba(108,143,255,.1);border:1px solid rgba(108,143,255,.3);color:var(--accent);border-radius:var(--radius);font-size:13px;cursor:pointer;margin-bottom:16px;}
@@ -66,28 +73,28 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 .rooms-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
 @media(min-width:600px){.rooms-grid{grid-template-columns:repeat(3,1fr);}}
 .room-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 12px;cursor:pointer;position:relative;overflow:hidden;transition:border-color .15s;}
-.room-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
-.room-card.occupied::before{background:var(--occupied);}
-.room-card.uncleaned::before{background:var(--uncleaned);}
-.room-card.cleaning::before{background:var(--cleaning);}
-.room-card.inspection::before{background:var(--inspection);}
-.room-card.vacant::before{background:var(--vacant);}
-.room-card.broken::before{background:var(--broken);}
-.room-card.card-selected{border-color:var(--uncleaned);box-shadow:0 0 0 2px rgba(239,68,68,.3);}
+.room-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;}
+.room-card.occupied{background:#fce7f3;border-color:#f9a8d4;}.room-card.occupied::before{background:#be185d;}.room-card.uncleaned{background:#fee2e2;border-color:#fca5a5;}.room-card.cleaning{background:#fef3c7;border-color:#fcd34d;}.room-card.inspection{background:#ede9fe;border-color:#c4b5fd;}.room-card.vacant{background:#dcfce7;border-color:#86efac;}.room-card.broken{background:#ffedd5;border-color:#fdba74;}
+.room-card.uncleaned::before{background:#dc2626;}
+.room-card.cleaning::before{background:#b45309;}
+.room-card.inspection::before{background:#6d28d9;}
+.room-card.vacant::before{background:#15803d;}
+.room-card.broken::before{background:#c2410c;}
+.room-card.card-selected{border-color:#2c2416;box-shadow:0 0 0 2px rgba(44,36,22,.35);}
 .card-check{font-size:18px;position:absolute;top:8px;right:10px;color:var(--uncleaned);}
 .room-no{font-size:24px;font-weight:700;}
 .room-type-row{display:flex;align-items:center;gap:5px;margin-top:2px;}
 .room-type{font-size:13px;color:var(--text2);}
 .bed-badge{display:inline-block;padding:1px 6px;border-radius:4px;font-size:11px;font-weight:700;letter-spacing:.03em;line-height:1.6;}
-.bed-twin{background:rgba(168,85,247,.18);color:#c084fc;border:1px solid rgba(168,85,247,.35);}
-.bed-double{background:rgba(245,158,11,.15);color:#fbbf24;border:1px solid rgba(245,158,11,.35);}
+.bed-twin{background:#6d28d9;color:#fff;border:1px solid #5b21b6;}
+.bed-double{background:#b45309;color:#fff;border:1px solid #a16207;}
 .room-status{display:inline-block;margin-top:8px;padding:3px 8px;border-radius:20px;font-size:13px;font-weight:600;}
-.status-occupied{background:rgba(244,114,182,.18);color:var(--occupied);}
-.status-uncleaned{background:rgba(239,68,68,.15);color:var(--uncleaned);}
-.status-cleaning{background:rgba(245,158,11,.15);color:var(--cleaning);}
-.status-inspection{background:rgba(226,232,240,.12);color:var(--inspection);}
-.status-broken{background:rgba(255,107,53,.18);color:var(--broken);}
-.status-vacant{background:rgba(74,222,128,.15);color:var(--vacant);}
+.status-occupied{background:#be185d;color:#fff;}
+.status-uncleaned{background:#dc2626;color:#fff;}
+.status-cleaning{background:#b45309;color:#fff;}
+.status-inspection{background:#6d28d9;color:#fff;}
+.status-broken{background:#c2410c;color:#fff;}
+.status-vacant{background:#15803d;color:#fff;}
 .room-maid{font-size:13px;color:var(--text2);margin-top:4px;}
 .room-maid-badge{display:inline-flex;align-items:center;gap:5px;margin-top:5px;padding:3px 8px;border-radius:20px;font-size:12px;font-weight:600;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:var(--text2);}
 .maid-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--text2);flex-shrink:0;}
@@ -107,7 +114,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 .room-card.assigned-4 { border-color: #facc15; box-shadow: 0 0 0 1.5px rgba(250,204,21,.35); }
 .room-card.assigned-4::before { background: #facc15 !important; }
 .room-card.assigned-4 .room-maid { color: #facc15; font-weight:600; }
-.notif-bar{display:none;position:fixed;top:0;left:0;right:0;background:#1e293b;border-bottom:2px solid var(--accent);padding:10px 16px;z-index:500;font-size:12px;color:var(--text);align-items:center;justify-content:space-between;gap:10px;}
+.notif-bar{display:none;position:fixed;top:0;left:0;right:0;background:#ede8de;border-bottom:2px solid var(--accent);padding:10px 16px;z-index:500;font-size:12px;color:var(--text);align-items:center;justify-content:space-between;gap:10px;}
 .notif-bar.show{display:flex;}
 .notif-allow-btn{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;}
 .notif-dismiss-btn{background:none;border:none;color:var(--text2);font-size:18px;cursor:pointer;padding:0 4px;}
@@ -184,7 +191,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 .assign-maid-btns{display:flex;gap:8px;flex-wrap:wrap;}
 
 /* ── 업무일지 모달 ── */
-.report-btn{width:100%;padding:10px;background:rgba(250,204,21,.1);border:1px solid rgba(250,204,21,.3);color:#facc15;border-radius:var(--radius);font-size:13px;cursor:pointer;margin-bottom:10px;}
+.report-btn{width:100%;padding:10px;background:#7c5c2e;border:1px solid #5c4321;color:#fff;border-radius:var(--radius);font-size:13px;cursor:pointer;margin-bottom:10px;font-weight:500;}
 .report-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:400;align-items:center;justify-content:center;padding:16px;}
 .report-modal-overlay.open{display:flex;}
 .report-modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);width:100%;max-width:420px;padding:24px;max-height:90vh;overflow-y:auto;}
@@ -204,12 +211,12 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 .bulk-bar-top{display:flex;align-items:center;justify-content:center;}<button id="selectAllBtn" class="select-all-btn" onclick="selectAllVisible()" style="display:none">현재 화면 전체선택</button>
 .bulk-status-btns{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;}
 .bulk-status-btn{flex:1 1 calc(33% - 7px);min-width:80px;padding:9px 6px;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;transition:opacity .2s;}
-.bulk-s-occupied{background:rgba(244,114,182,.25);color:#f9a8d4;}
-.bulk-s-uncleaned{background:rgba(239,68,68,.25);color:#fca5a5;}
-.bulk-s-cleaning{background:rgba(245,158,11,.25);color:#fde68a;}
-.bulk-s-inspection{background:rgba(148,163,184,.2);color:#e2e8f0;}
-.bulk-s-vacant{background:rgba(74,222,128,.2);color:#86efac;}
-.bulk-s-broken{background:rgba(255,107,53,.25);color:#fdba74;}
+.bulk-s-occupied{background:#9d174d;color:#fff;}
+.bulk-s-uncleaned{background:#b91c1c;color:#fff;}
+.bulk-s-cleaning{background:#a16207;color:#fff;}
+.bulk-s-inspection{background:#5b21b6;color:#fff;}
+.bulk-s-vacant{background:#15803d;color:#fff;}
+.bulk-s-broken{background:#c2410c;color:#fff;}
 
 /* ── 객실 상태변경 팝업 애니메이션 ── */
 @keyframes rcpSlideIn {
@@ -223,7 +230,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 
 .rooms-grid-inner{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:4px;}
 @media(max-width:400px){.rooms-grid-inner{grid-template-columns:repeat(2,1fr);}}
-.room-inspector-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:2px 8px;border-radius:10px;background:rgba(108,143,255,.15);color:var(--accent);border:1px solid rgba(108,143,255,.3);margin-bottom:3px;}
+.room-inspector-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:2px 8px;border-radius:10px;background:rgba(255,255,255,.6);color:#4c1d95;border:1px solid rgba(108,143,255,.3);margin-bottom:3px;}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
@@ -290,11 +297,11 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 </div>
 <div class="filter-row">
 <button class="filter-btn active" data-filter="all" onclick="setFilter('all')">전체 / All</button>
-<button class="filter-btn" data-filter="occupied" onclick="setFilter('occupied')">🔵 재실 / Occupied</button>
+<button class="filter-btn" data-filter="occupied" onclick="setFilter('occupied')">🩷 재실 / Occupied</button>
 <button class="filter-btn" data-filter="uncleaned" onclick="setFilter('uncleaned')">🔴 미정비 / Uncleaned</button>
 <button class="filter-btn" data-filter="cleaning" onclick="setFilter('cleaning')">🟡 정비중 / Cleaning</button>
 <button class="filter-btn" data-filter="inspection" onclick="setFilter('inspection')">🟣 인스펙션 / Inspection</button>
-<button class="filter-btn" data-filter="vacant" onclick="setFilter('vacant')">💙 공실완료 / Vacant</button>
+<button class="filter-btn" data-filter="vacant" onclick="setFilter('vacant')">💚 공실완료 / Vacant</button>
 <button class="filter-btn" data-filter="broken" onclick="setFilter('broken')">🔶 고장 / Broken</button>
 </div>
 <button class="select-mode-btn" id="selectModeBtn" style="display:none" onclick="toggleSelectMode()">☑ 객실 선택 (일괄 상태변경)</button>
