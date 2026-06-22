@@ -445,8 +445,8 @@ function render(){
         '<div style="background:var(--vacant);height:100%;width:'+pct+'%;border-radius:6px;transition:width .4s ease;"></div>'+
       '</div>'+
       '<div style="margin-top:5px;font-size:11px;color:var(--text2);text-align:right;">'+
-        (pending.length>0?'남은 객실 '+pending.length+'개':'✅ 모든 객실 공실완료!')+
-        ' · 완료율 '+pct+'%'+
+        (pending.length>0?'남은 객실 '+pending.length+'개 / '+pending.length+' left':'✅ 모든 객실 공실완료! / All Vacant!')+
+        ' · 완료율 '+pct+'% / '+pct+'% done'+
         (etaStr?' · <span style="color:var(--accent);font-weight:600;">'+etaStr+'</span>':'')+
       '</div>';
     grid.appendChild(bar);
@@ -698,7 +698,7 @@ async function setTodayInspectorUI(name){
   else toast('오류');
 }
 async function confirmReset(){
-if(!confirm('⚠️ 전체 객실을 미정비로 초기화합니다.\n재실·공실완료 포함 모든 상태가 초기화됩니다.\n정말 계속하시겠습니까?'))return;
+if(!confirm('⚠️ 전체 객실을 공실완료로 초기화합니다.\n재실·공실완료 포함 모든 상태가 초기화됩니다.\n정말 계속하시겠습니까?'))return;
 if(!confirm('🔴 재확인: 정말로 전체 초기화하시겠습니까?'))return;
 showLoad('초기화...');
 try{await api({action:'resetRooms'});await loadRooms(true);hideLoad();toast('✅ 초기화완료');}
