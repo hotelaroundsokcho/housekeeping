@@ -382,13 +382,13 @@ return d.toLocaleDateString('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'
 const MAID_COLORS = ['#06b6d4','#a78bfa','#fb923c','#f472b6','#facc15'];
 
 const STATUS_CARD_THEME = {
-occupied: {bg:'#fce7f3', border:'#f472b6', numColor:'#500724', dimColor:'#831843'},
-uncleaned: {bg:'#fee2e2', border:'#ef4444', numColor:'#450a0a', dimColor:'#7f1d1d'},
-cleaning: {bg:'#fef9c3', border:'#fde047', numColor:'#422006', dimColor:'#713f12'},
-inspection: {bg:'#ede9fe', border:'#94a3b8', numColor:'#2e1065', dimColor:'#3b0764'},
-vacant: {bg:'#dcfce7', border:'#4ade80', numColor:'#052e16', dimColor:'#14532d'},
-broken: {bg:'#ffedd5', border:'#ff6b35', numColor:'#431407', dimColor:'#7c2d12'},
-cleaned: {bg:'#ede9fe', border:'#94a3b8', numColor:'#3b0764', dimColor:'#4c1d95'}
+occupied:   {bg:'#f9a8d4', border:'#ec4899', numColor:'#ffffff', dimColor:'#000000'},
+uncleaned:  {bg:'#f87171', border:'#dc2626', numColor:'#ffffff', dimColor:'#000000'},
+cleaning:   {bg:'#fcd34d', border:'#f59e0b', numColor:'#1c1200', dimColor:'#000000'},
+inspection: {bg:'#a78bfa', border:'#7c3aed', numColor:'#ffffff', dimColor:'#000000'},
+vacant:     {bg:'#4ade80', border:'#16a34a', numColor:'#022c16', dimColor:'#000000'},
+broken:     {bg:'#fb923c', border:'#ea580c', numColor:'#ffffff', dimColor:'#000000'},
+cleaned:    {bg:'#a78bfa', border:'#7c3aed', numColor:'#ffffff', dimColor:'#000000'},
 };
 
 function render(){
@@ -511,7 +511,7 @@ function buildCard(room, isDone){
     maidHtml=maidNames.map(function(name){
       const mc=getMaidColorIdx(name);
       const color=mc>=0?MAID_COLORS[mc]:null;
-      return '<div class="room-maid-badge"'+(color?' style="background:'+color+'22;color:'+color+';border-color:'+color+'44"':'')+'>'        +'<span class="maid-dot"'+(color?' style="background:'+color+'"':'')+'>'+'</span>'+esc(name)+'</div>';
+      return '<div class="room-maid-badge"'+(color?' style="background:'+color+'22;color:#000000;border-color:'+color+'44"':'')+'>'        +'<span class="maid-dot"'+(color?' style="background:'+color+'"':'')+'>'+'</span>'+esc(name)+'</div>';
     }).join('');
   }else if(room.status==='cleaning'){
     maidHtml='<div class="room-maid-badge" style="background:rgba(245,158,11,.18);color:#f59e0b;border-color:rgba(245,158,11,.5);font-weight:700;">⚠️ 미배정</div>';
