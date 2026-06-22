@@ -71,7 +71,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 .bulk-btn{flex:1;padding:13px;background:var(--uncleaned);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;}
 .bulk-btn:disabled{opacity:.4;cursor:not-allowed;}
 .rooms-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
-@media(min-width:600px){.rooms-grid{grid-template-columns:repeat(3,1fr);}}
+@media(min-width:600px){.rooms-grid{grid-template-columns:repeat(3,1fr);}}@media(min-width:768px){.rooms-grid{grid-template-columns:repeat(4,1fr);}}@media(min-width:1024px){.rooms-grid{grid-template-columns:repeat(5,1fr);}}@media(min-width:768px){.rooms-grid{grid-template-columns:repeat(4,1fr);}}@media(min-width:1024px){.rooms-grid{grid-template-columns:repeat(5,1fr);}}
 .room-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 12px;cursor:pointer;position:relative;overflow:hidden;transition:border-color .15s;}
 .room-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;}
 .room-card.occupied{background:#fce7f3;border-color:#f9a8d4;}.room-card.occupied::before{background:#be185d;}.room-card.uncleaned{background:#fee2e2;border-color:#fca5a5;}.room-card.cleaning{background:#fef3c7;border-color:#fcd34d;}.room-card.inspection{background:#ede9fe;border-color:#c4b5fd;}.room-card.vacant{background:#dcfce7;border-color:#86efac;}.room-card.broken{background:#ffedd5;border-color:#fdba74;}
