@@ -5,7 +5,8 @@ room:null, status:null, chatSince:null,
 isInspector:false, selectMode:false, selected:new Set(),
 assignMode:false, assignSelected:new Set(),
 todayInspector:'',
-  crossInspection:false
+  crossInspection:false,
+  maidFilter:''
 };
 let timer = null;
 const MAID_COLOR_MAP = {};
@@ -162,6 +163,10 @@ const st=r.status==='cleaned'?'inspection':r.status;
 if(c[st]!==undefined)c[st]++;
 });
 ['occupied','uncleaned','cleaning','inspection','vacant','broken'].forEach((k,i)=>$('cnt'+i).textContent=c[k]);
+const total=S.rooms.length;
+const cntAllEl=$('cntAll');
+if(cntAllEl)cntAllEl.textContent=total;
+updateStatCardHighlight();
 }
 
 function maidStats(){
@@ -172,12 +177,10 @@ S.rooms.forEach(r=>{
 if(!r.maidName)return;
 const maids=r.maidName.split(',').map(n=>n.trim()).filter(Boolean);
 maids.forEach(function(name){
-if(!tally[name])tally[name]={done:0,wip:0,total:0};
-if(['uncleaned','cleaning','inspection','vacant','cleaned'].includes(r.status)){
+if(!tally[name])tally[name]={occupied:0,uncleaned:0,cleaning:0,inspection:0,vacant:0,broken:0,total:0};
 tally[name].total++;
-if(r.status==='inspection'||r.status==='vacant'||r.status==='cleaned')tally[name].done++;
-if(r.status==='cleaning')tally[name].wip++;
-}
+const _st=r.status==='cleaned'?'inspection':r.status;
+if(tally[name][_st]!==undefined)tally[name][_st]++;
 });
 });
 const names=Object.keys(tally);
@@ -187,10 +190,30 @@ names.forEach(function(name){
 const d=tally[name];
 const pct=d.total?Math.round(d.done/d.total*100):0;
 const card=document.createElement('div');card.className='maid-stat-card';
-card.innerHTML='<div class="maid-stat-name">'+esc(name)+'</div>'+
-'<div class="maid-stat-numbers"><span class="maid-stat-done">완료 '+d.done+'</span><span class="maid-stat-wip">정비중 '+d.wip+'</span><span class="maid-stat-total">/ '+d.total+'객실</span></div>'+
-'<div class="maid-stat-bar-wrap"><div class="maid-stat-bar" style="width:'+pct+'%"></div></div>'+
-'<div class="maid-stat-pct">'+pct+'% 완료</div>';
+card.dataset.maid=name;
+card.innerHTML='<div class="maid-stat-name">'+esc(name)+'<span style="font-size:11px;font-weight:500;color:var(--text2);margin-left:8px;">총 '+d.total+'객실</span></div>'+
+'<div class="maid-stat-numbers" style="flex-wrap:wrap;gap:6px 10px;">'+
+(d.occupied?'<span style="color:var(--occupied);font-size:12px;font-weight:600;">재실 '+d.occupied+'</span>':'')+
+(d.uncleaned?'<span style="color:var(--uncleaned);font-size:12px;font-weight:600;">미정비 '+d.uncleaned+'</span>':'')+
+(d.cleaning?'<span style="color:var(--cleaning);font-size:12px;font-weight:600;">정비중 '+d.cleaning+'</span>':'')+
+(d.inspection?'<span style="color:var(--inspection);font-size:12px;font-weight:600;">인스펙션 '+d.inspection+'</span>':'')+
+(d.vacant?'<span style="color:var(--vacant);font-size:12px;font-weight:600;">공실완료 '+d.vacant+'</span>':'')+
+(d.broken?'<span style="color:var(--broken);font-size:12px;font-weight:600;">고장 '+d.broken+'</span>':'')+
+'</div>'+
+'<div class="maid-stat-bar-wrap"><div class="maid-stat-bar" style="width:'+(d.total?Math.round(d.vacant/d.total*100):0)+'%"></div></div>'+
+'<div class="maid-stat-pct">'+(d.total?Math.round(d.vacant/d.total*100):0)+'% 공실완료</div>';
+card.onclick=function(){
+  if(S.maidFilter===name){
+    S.maidFilter='';
+    updateMaidStatHighlight('');
+    updateStatCardHighlight();
+  }else{
+    S.maidFilter=name;
+    updateMaidStatHighlight(name);
+    document.querySelectorAll('.stat-card').forEach(c=>c.classList.remove('active-filter'));
+  }
+  render();
+};
 box.appendChild(card);
 });
 }
@@ -364,8 +387,27 @@ toast('✅ '+cnt+'개 객실 배정 완료: '+label);
 
 function setFilter(f){
 S.filter=f;
+S.maidFilter='';
 document.querySelectorAll('.filter-btn').forEach(b=>b.classList.toggle('active',b.dataset.filter===f));
+updateStatCardHighlight();
+updateMaidStatHighlight('');
 render();
+}
+
+function updateStatCardHighlight(){
+const ids=['statCardAll','statCard0','statCard1','statCard2','statCard3','statCard4','statCard5'];
+const filters=['all','occupied','uncleaned','cleaning','inspection','vacant','broken'];
+ids.forEach((id,i)=>{
+const el=$(id);
+if(!el)return;
+el.classList.toggle('active-filter', S.filter===filters[i] && !S.maidFilter);
+});
+}
+
+function updateMaidStatHighlight(name){
+document.querySelectorAll('.maid-stat-card').forEach(c=>{
+c.classList.toggle('active-maid', !!name && c.dataset.maid===name);
+});
 }
 
 function fmtCardTime(iso){
@@ -394,6 +436,7 @@ cleaned:    {bg:'#a78bfa', border:'#7c3aed', numColor:'#ffffff', dimColor:'#0000
 function render(){
   let rooms=S.rooms.map(r=>r.status==='cleaned'?{...r,status:'inspection'}:r);
   if(S.filter!=='all')rooms=rooms.filter(x=>x.status===S.filter);
+  if(S.maidFilter)rooms=rooms.filter(x=>x.maidName&&x.maidName.split(',').map(n=>n.trim().toLowerCase()).includes(S.maidFilter.toLowerCase()));
 
   // ── 메이드 화면 전용 처리 ──
   if(S.role==='maid'){
