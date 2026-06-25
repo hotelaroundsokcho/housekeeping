@@ -30,7 +30,9 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 .content{flex:1;overflow-y:auto;padding:16px;padding-bottom:80px;}
 .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;}
 .stats-row-top{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:8px;}
-.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px 6px;text-align:center;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px 6px;text-align:center;cursor:pointer;transition:border-color .15s,box-shadow .15s;user-select:none;}
+.stat-card:hover{border-color:var(--accent);box-shadow:0 0 0 2px rgba(124,92,46,.2);}
+.stat-card.active-filter{border-color:var(--accent);box-shadow:0 0 0 3px rgba(124,92,46,.25);}
 .stat-num{font-size:24px;font-weight:700;}
 .stat-label{font-size:12px;color:var(--text2);margin-top:2px;}
 .s-occupied .stat-num{color:var(--occupied);}
@@ -42,7 +44,9 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 .maid-stats-section{margin-bottom:14px;}
 .maid-stats-title{font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em;}
 .maid-stats-grid{display:flex;flex-direction:column;gap:8px;}
-.maid-stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;}
+.maid-stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;cursor:pointer;transition:border-color .15s,box-shadow .15s;}
+.maid-stat-card:hover{border-color:var(--accent);}
+.maid-stat-card.active-maid{border-color:var(--accent);box-shadow:0 0 0 3px rgba(124,92,46,.25);}
 .maid-stat-name{font-size:15px;font-weight:600;margin-bottom:6px;}
 .maid-stat-numbers{display:flex;gap:10px;align-items:center;margin-bottom:6px;}
 .maid-stat-done{font-size:12px;color:var(--vacant);font-weight:600;}
@@ -281,21 +285,22 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 <div class="nav-tab" onclick="showTab('chat')">💬 채팅</div>
 </div>
 <div id="tabRooms" class="content">
-<div class="stats-row" style="margin-bottom:8px">
-<div class="stat-card s-occupied"><div class="stat-num" id="cnt0">0</div><div class="stat-label">💗 재실 / Occupied</div></div>
-<div class="stat-card s-uncleaned"><div class="stat-num" id="cnt1">0</div><div class="stat-label">🔴 미정비 / Uncleaned</div></div>
-<div class="stat-card s-cleaning"><div class="stat-num" id="cnt2">0</div><div class="stat-label">🟡 정비중 / Cleaning</div></div>
+<div class="stats-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:8px">
+<div class="stat-card s-all active-filter" id="statCardAll" onclick="setFilter('all')"><div class="stat-num" id="cntAll" style="color:var(--accent)">0</div><div class="stat-label">🏠 전체 / All</div></div>
+<div class="stat-card s-occupied" id="statCard0" onclick="setFilter('occupied')"><div class="stat-num" id="cnt0">0</div><div class="stat-label">💗 재실 / Occupied</div></div>
+<div class="stat-card s-uncleaned" id="statCard1" onclick="setFilter('uncleaned')"><div class="stat-num" id="cnt1">0</div><div class="stat-label">🔴 미정비 / Uncleaned</div></div>
+<div class="stat-card s-cleaning" id="statCard2" onclick="setFilter('cleaning')"><div class="stat-num" id="cnt2">0</div><div class="stat-label">🟡 정비중 / Cleaning</div></div>
 </div>
-<div class="stats-row">
-<div class="stat-card s-inspection"><div class="stat-num" id="cnt3">0</div><div class="stat-label">◻️ 인스펙션 / Inspection</div></div>
-<div class="stat-card s-vacant"><div class="stat-num" id="cnt4">0</div><div class="stat-label">🟢 공실완료 / Vacant</div></div>
-<div class="stat-card s-broken"><div class="stat-num" id="cnt5">0</div><div class="stat-label">🔶 고장 / Broken</div></div>
+<div class="stats-row" style="grid-template-columns:repeat(3,1fr)">
+<div class="stat-card s-inspection" id="statCard3" onclick="setFilter('inspection')"><div class="stat-num" id="cnt3">0</div><div class="stat-label">◻️ 인스펙션 / Inspection</div></div>
+<div class="stat-card s-vacant" id="statCard4" onclick="setFilter('vacant')"><div class="stat-num" id="cnt4">0</div><div class="stat-label">🟢 공실완료 / Vacant</div></div>
+<div class="stat-card s-broken" id="statCard5" onclick="setFilter('broken')"><div class="stat-num" id="cnt5">0</div><div class="stat-label">🔶 고장 / Broken</div></div>
 </div>
 <div class="maid-stats-section" id="maidStatsSection" style="display:none">
 <div class="maid-stats-title">👥 메이드별 현황</div>
 <div class="maid-stats-grid" id="maidStatsGrid"></div>
 </div>
-<div class="filter-row">
+<div class="filter-row" style="display:none">
 <button class="filter-btn active" data-filter="all" onclick="setFilter('all')">전체 / All</button>
 <button class="filter-btn" data-filter="occupied" onclick="setFilter('occupied')">🩷 재실 / Occupied</button>
 <button class="filter-btn" data-filter="uncleaned" onclick="setFilter('uncleaned')">🔴 미정비 / Uncleaned</button>
