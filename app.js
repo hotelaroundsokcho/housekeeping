@@ -752,7 +752,7 @@ function renderTodayInspectorBar(){
   const crossOn=S.crossInspection;
   crossBtn.textContent=crossOn?'크로스 ON':'크로스 OFF';
   crossBtn.style.cssText=crossOn?activeStyle:inactiveStyle;
-  crossBtn.title='크로스 인스폝션: 정비 메이드와 다른 메이드가 점검';
+  crossBtn.title='크로스 인스펙션: 정비 메이드와 다른 메이드가 점검';
   crossBtn.addEventListener('click',function(){toggleCrossInspection();});
   bar.appendChild(crossBtn);
 }
