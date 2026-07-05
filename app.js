@@ -726,7 +726,7 @@ function renderTodayInspectorBar(){
   bar.innerHTML='';
   const inspectors=S.maids&&S.maids.length?S.maids:['Mat','Diana'];
   const label=document.createElement('span');
-  label.textContent='오늘의 인스폝터:';
+  label.textContent='오늘의 인스펙터:';
   label.style.cssText='font-size:13px;color:var(--text2);margin-right:8px;align-self:center;flex-shrink:0;';
   bar.appendChild(label);
   const activeStyle='background:#7c5c2e;color:#faf7f2;border:none;border-radius:20px;padding:5px 16px;font-size:13px;font-weight:500;cursor:pointer;margin-right:6px;';
