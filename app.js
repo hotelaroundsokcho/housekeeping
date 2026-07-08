@@ -64,45 +64,50 @@ $('maidForm').style.display=t==='maid'?'block':'none';
 $('loginError').textContent='';
 }
 
-async function login(){
-const p=$('pinInput').value.trim();
-if(!p)return;
-const nameSelect=$('adminNameSelect');
-if(nameSelect && nameSelect.style.display==='block'){
-if(!S.name){$('loginError').textContent='이름을 선택하세요';return;}
-sessionStorage.setItem('hk_role','admin');sessionStorage.setItem('hk_name',S.name);go();return;
+function pickAdminName(name){
+S.pendingAdminName=name;
+document.querySelectorAll('.admin-name-btn').forEach(b=>b.classList.toggle('active',b.dataset.name===name));
+$('loginError').textContent='';
 }
+async function loginAdmin(){
+if(!S.pendingAdminName){$('loginError').textContent='이름을 선택하세요';return;}
+const pw=$('adminPwInput').value;
 showLoad('인증 중...');
-const hash=await sha256(p);
-const r=await api({action:'verifyPin',pin:hash});
+const pwHash=pw?await sha256(pw):'';
+const r=await api({action:'verifyAdmin',name:S.pendingAdminName,password:pwHash});
 hideLoad();
 if(r.ok){
-if(nameSelect){
-  nameSelect.style.display='block';
-  renderAdminNameBtns(r.admins);
-}
-$('loginError').textContent='';
-}else $('loginError').textContent='PIN 오류';
-}
-
-function selectAdminName(name){
-S.role='admin'; S.name=name;
-document.querySelectorAll('.admin-name-btn').forEach(b=>b.classList.toggle('active',b.dataset.name===name));
-sessionStorage.setItem('hk_role','admin');
-sessionStorage.setItem('hk_name',name);
+S.role='admin';S.name=r.name;
+sessionStorage.setItem('hk_role','admin');sessionStorage.setItem('hk_name',r.name);
 go();
+}else if(r.needsSetup){
+$('loginError').textContent='';
+openAdminPwSetup(r.name||S.pendingAdminName);
+}else{
+$('loginError').textContent=r.error||'로그인 실패';
+}
+}
+function openAdminPwSetup(name){
+S.pwSetupName=name;
+S.pwSetupMode=true;
+$('cpCurrent').value='';$('cpNew').value='';$('cpConfirm').value='';$('cpError').textContent='';
+$('cpModalTitle').textContent='🔑 비밀번호 최초 설정 ('+name+')';
+$('cpCurrentGroup').style.display='none';
+$('changePinModal').classList.add('open');
 }
 function renderAdminNameBtns(admins){
 const wrap=$('adminNameSelect');
 if(!wrap)return;
-wrap.innerHTML='';
+const listEl=wrap.querySelector('.admin-name-btns');
+if(!listEl)return;
+listEl.innerHTML='';
 (admins||['장경순','박지연']).forEach(function(name){
   const btn=document.createElement('button');
   btn.className='admin-name-btn';
   btn.dataset.name=name;
-  btn.textContent='👔 '+name;
-  btn.onclick=function(){selectAdminName(name);};
-  wrap.appendChild(btn);
+  btn.textContent=name;
+  btn.onclick=function(){pickAdminName(name);};
+  listEl.appendChild(btn);
 });
 }
 async function loginMaid(){
@@ -122,16 +127,16 @@ function logout(){
 clearInterval(timer);
 sessionStorage.removeItem('hk_role');
 sessionStorage.removeItem('hk_name');
-const ns=$('adminNameSelect');if(ns){ns.style.display='none';}
 switchTab('admin');
-S={role:null,name:'',rooms:[],filter:'all',room:null,status:null,chatSince:null,selectMode:false,selected:new Set(),assignMode:false,assignSelected:new Set()};_prevRoomMap=null;_popupQueue=[];_popupRunning=false;
+S={role:null,name:'',rooms:[],filter:'all',room:null,status:null,chatSince:null,selectMode:false,selected:new Set(),assignMode:false,assignSelected:new Set(),pendingAdminName:null};_prevRoomMap=null;_popupQueue=[];_popupRunning=false;
 $('loginScreen').style.display='flex';$('app').style.display='none';
-$('pinInput').value='';$('maidNameInput').value='';
+const pwEl=$('adminPwInput');if(pwEl)pwEl.value='';
+$('maidNameInput').value='';
 document.querySelectorAll('.admin-name-btn').forEach(b=>b.classList.remove('active'));
 }
 async function go(){
 $('loginScreen').style.display='none';$('app').style.display='flex';
-$('headerSub').textContent=S.role==='admin'?'관리자 모드':S.name+' 님';
+$('headerSub').textContent=S.role==='admin'?'관리자('+S.name+')':S.name+' 님';
 ['resetBtn','maidSec','changePinBtn','maidMgmtBtn','adminMgmtBtn','inspectorMgmtBtn','reportBtn','maidStatsSection','selectModeBtn','assignModeBtn'].forEach(id=>{
 const el=$(id);if(el)el.style.display=S.role==='admin'?'block':'none';
 });
@@ -779,9 +784,42 @@ async function toggleCrossInspection(){
   else toast('설정 실패');
 }
 function closeMaidMgmtModal(e){if(!e||e.target.id==='maidMgmtModal')$('maidMgmtModal').classList.remove('open');}
-function openChangePinModal(){$('cpCurrent').value='';$('cpNew').value='';$('cpConfirm').value='';$('cpError').textContent='';$('changePinModal').classList.add('open');}
+function openChangePinModal(){
+S.pwSetupMode=false;
+$('cpCurrent').value='';$('cpNew').value='';$('cpConfirm').value='';$('cpError').textContent='';
+$('cpModalTitle').textContent='🔑 관리자 비밀번호 변경';
+$('cpCurrentGroup').style.display='block';
+$('changePinModal').classList.add('open');
+}
 function closeChangePinModal(e){if(!e||e.target.id==='changePinModal')$('changePinModal').classList.remove('open');}
-async function savePin(){const cur=$('cpCurrent').value.trim(),nw=$('cpNew').value.trim(),cf=$('cpConfirm').value.trim();if(!cur||!nw||!cf){$('cpError').textContent='모든 항목을 입력하세요';return;}if(nw.length<4||!/^\d+$/.test(nw)){$('cpError').textContent='새 PIN은 숫자 4자리 이상';return;}if(nw!==cf){$('cpError').textContent='새 PIN이 일치하지 않습니다';return;}showLoad('PIN 변경 중...');const curHash=await sha256(cur),newHash=await sha256(nw);const r=await api({action:'changePin',currentHash:curHash,newHash:newHash});hideLoad();if(r.ok){$('changePinModal').classList.remove('open');toast('✅ PIN 변경 완료');}else $('cpError').textContent=r.error||'변경 실패';}
+async function savePin(){
+const nw=$('cpNew').value.trim(),cf=$('cpConfirm').value.trim();
+if(!nw||!cf){$('cpError').textContent='모든 항목을 입력하세요';return;}
+if(nw.length<4){$('cpError').textContent='새 비밀번호는 4자 이상';return;}
+if(nw!==cf){$('cpError').textContent='새 비밀번호가 일치하지 않습니다';return;}
+const newHash=await sha256(nw);
+if(S.pwSetupMode){
+showLoad('설정 중...');
+const r=await api({action:'setAdminPassword',name:S.pwSetupName,oldPassword:'',newPassword:newHash});
+hideLoad();
+if(r.ok){
+$('changePinModal').classList.remove('open');
+S.role='admin';S.name=r.name||S.pwSetupName;
+sessionStorage.setItem('hk_role','admin');sessionStorage.setItem('hk_name',S.name);
+toast('✅ 비밀번호 설정 완료');
+go();
+}else $('cpError').textContent=r.error||'설정 실패';
+}else{
+const cur=$('cpCurrent').value.trim();
+if(!cur){$('cpError').textContent='현재 비밀번호를 입력하세요';return;}
+const curHash=await sha256(cur);
+showLoad('변경 중...');
+const r=await api({action:'setAdminPassword',name:S.name,oldPassword:curHash,newPassword:newHash});
+hideLoad();
+if(r.ok){$('changePinModal').classList.remove('open');toast('✅ 비밀번호 변경 완료');}
+else $('cpError').textContent=r.error||'변경 실패';
+}
+}
 async function loadChat(s=false){
 try{
 const r=await api({action:'getChat',since:S.chatSince});
@@ -1096,6 +1134,12 @@ function showRoomChangePopup(item, onDone){
 const role=sessionStorage.getItem('hk_role');
 const name=sessionStorage.getItem('hk_name');
 if(role&&name){S.role=role;S.name=name;S.isInspector=sessionStorage.getItem('hk_inspector')==='1';go();}
+})();
+(async function loadAdminButtons(){
+try{
+const r=await api({action:'getAdmins'});
+if(r.ok&&r.admins&&r.admins.length)renderAdminNameBtns(r.admins);
+}catch(e){}
 })();
 
 // ── 업무일지 다운로드 ──
