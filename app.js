@@ -7,7 +7,8 @@ assignMode:false, assignSelected:new Set(),
 todayInspector:'',
   crossInspection:false,
   maidFilter:'',
-maidPasswordSet:false
+maidPasswordSet:false,
+pendingAdminName:null
 };
 let timer = null;
 const MAID_COLOR_MAP = {};
