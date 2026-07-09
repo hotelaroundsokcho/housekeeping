@@ -55,6 +55,25 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 .maid-stat-bar-wrap{background:var(--surface2);border-radius:4px;height:5px;overflow:hidden;margin-bottom:4px;}
 .maid-stat-bar{height:100%;background:var(--vacant);border-radius:4px;transition:width .4s ease;}
 .maid-stat-pct{font-size:10px;color:var(--text2);}
+.maid-stat-header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;}
+.maid-stat-main{flex:1;min-width:0;cursor:pointer;}
+.maid-stat-toggle{background:none;border:none;color:var(--text2);cursor:pointer;font-size:13px;padding:4px 6px;line-height:1;flex-shrink:0;transition:transform .2s ease,color .15s ease;}
+.maid-stat-card.open .maid-stat-toggle{transform:rotate(180deg);color:var(--accent);}
+.maid-stat-detail{display:none;margin-top:10px;padding-top:10px;border-top:1px dashed var(--border);}
+.maid-stat-card.open .maid-stat-detail{display:block;}
+.maid-stat-detail-loading{font-size:12px;color:var(--text2);padding:6px 0;}
+.hist-stats-row{display:flex;gap:8px;margin-bottom:10px;}
+.hist-stat-box{flex:1;background:var(--surface2);border-radius:8px;padding:8px 6px;text-align:center;}
+.hist-stat-num{font-size:17px;font-weight:700;color:var(--accent);}
+.hist-stat-label{font-size:10px;color:var(--text2);margin-top:2px;}
+.hist-section-title{font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px;}
+.tl-item{display:flex;gap:8px;}
+.tl-left{display:flex;flex-direction:column;align-items:center;width:8px;}
+.tl-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0;margin-top:4px;}
+.tl-line{flex:1;width:1px;background:var(--border);min-height:14px;}
+.tl-body{flex:1;padding-bottom:8px;}
+.tl-detail{display:flex;align-items:center;gap:5px;}
+.tl-time{font-size:10px;color:var(--text2);margin-top:2px;}
 .filter-row{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
 .filter-btn{padding:6px 13px;border-radius:20px;border:2px solid transparent;background:#ede8de;color:#2c2416;font-size:13px;cursor:pointer;font-weight:600;transition:opacity .15s;}
 .filter-btn:hover{opacity:.85;}
@@ -74,8 +93,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 .bulk-count{font-size:13px;color:var(--text2);font-weight:600;}
 .bulk-btn{flex:1;padding:13px;background:var(--uncleaned);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;}
 .bulk-btn:disabled{opacity:.4;cursor:not-allowed;}
-.rooms-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
-@media(min-width:600px){.rooms-grid{grid-template-columns:repeat(3,1fr);}}@media(min-width:768px){.rooms-grid{grid-template-columns:repeat(4,1fr);}}@media(min-width:1024px){.rooms-grid{grid-template-columns:repeat(5,1fr);}}@media(min-width:768px){.rooms-grid{grid-template-columns:repeat(4,1fr);}}@media(min-width:1024px){.rooms-grid{grid-template-columns:repeat(5,1fr);}}
+.rooms-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;}
 .room-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 12px;cursor:pointer;position:relative;overflow:hidden;transition:border-color .15s;}
 .room-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;}
 .room-card.occupied{background:#fce7f3;border-color:#f9a8d4;}.room-card.occupied::before{background:#be185d;}.room-card.uncleaned{background:#fee2e2;border-color:#fca5a5;}.room-card.cleaning{background:#fef3c7;border-color:#fcd34d;}.room-card.inspection{background:#ede9fe;border-color:#c4b5fd;}.room-card.vacant{background:#dcfce7;border-color:#86efac;}.room-card.broken{background:#ffedd5;border-color:#fdba74;}
@@ -232,8 +250,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
   to   { opacity:0; transform:translateX(110%); }
 }
 
-.rooms-grid-inner{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:4px;}
-@media(max-width:400px){.rooms-grid-inner{grid-template-columns:repeat(2,1fr);}}
+.rooms-grid-inner{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:4px;}
 .room-inspector-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:2px 8px;border-radius:10px;background:rgba(255,255,255,.6);color:#4c1d95;border:1px solid rgba(108,143,255,.3);margin-bottom:3px;}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -262,6 +279,9 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 <div id="maidForm" style="display:none">
 <div class="form-group"><label>이름 입력</label>
 <input type="text" id="maidNameInput" placeholder="등록된 이름 입력" onkeydown="if(event.key==='Enter')loginMaid()">
+</div>
+<div class="form-group"><label>비밀번호 (설정한 경우만 입력)</label>
+<input type="password" id="maidPwInput" placeholder="비밀번호" onkeydown="if(event.key==='Enter')loginMaid()">
 </div>
 <button class="btn-primary" onclick="loginMaid()">입장하기</button>
 </div>
@@ -315,7 +335,8 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 <button class="maid-mgmt-btn" id="maidMgmtBtn" style="display:none" onclick="openMaidMgmtModal()">👥 메이드 명단 관리</button>
         <button class="maid-mgmt-btn" id="adminMgmtBtn" style="display:none" onclick="openAdminMgmtModal()">👔 관리자 명단 관리</button>
 <button class="maid-mgmt-btn" id="inspectorMgmtBtn" style="display:none" onclick="openInspectorModal()">🔎 인스펙터 관리</button>
-<button class="change-pin-btn" id="changePinBtn" style="display:none" onclick="openChangePinModal()">🔑 관리자 PIN 변경</button>
+<button class="change-pin-btn" id="changePinBtn" style="display:none" onclick="openChangePinModal()">🔑 관리자 비밀번호 변경</button>
+<button class="change-pin-btn" id="maidPwBtn" style="display:none" onclick="openMaidPwModal()">🔑 내 비밀번호 설정/변경</button>
 <div id="todayInspectorBar" style="display:none;align-items:center;flex-wrap:wrap;gap:6px;padding:10px 16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:10px;"></div>
 <div class="rooms-grid" id="roomsGrid"></div>
 <div id="reportBtn" style="display:none"><button class="report-btn" onclick="openReportModal()">📋 업무일지 다운로드</button></div>
@@ -418,6 +439,23 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 <div class="pin-error" id="cpError"></div>
 <button class="pin-save-btn" onclick="savePin()">저장</button>
 <button class="pin-cancel-btn" onclick="closeChangePinModal()">취소</button>
+</div>
+</div>
+
+<div class="modal-overlay" id="maidPwModal" onclick="closeMaidPwModal(event)">
+<div class="pin-modal">
+<div class="modal-handle"></div>
+<h3 style="margin-bottom:6px">🔑 내 비밀번호 설정</h3>
+<p style="font-size:11px;color:var(--text2);margin-bottom:18px" id="maidPwModalDesc">비밀번호를 설정하면 다음 로그인부터 이름+비밀번호로 입장합니다.</p>
+<div class="form-group" id="maidPwOldGroup" style="display:none"><label style="font-size:12px;color:var(--text2);display:block;margin-bottom:6px">현재 비밀번호</label>
+<input type="password" class="pin-input" id="mpwCurrent" placeholder="현재 비밀번호 입력"></div>
+<div class="form-group"><label style="font-size:12px;color:var(--text2);display:block;margin-bottom:6px">새 비밀번호 (4자리 이상)</label>
+<input type="password" class="pin-input" id="mpwNew" placeholder="새 비밀번호 입력"></div>
+<div class="form-group"><label style="font-size:12px;color:var(--text2);display:block;margin-bottom:6px">새 비밀번호 확인</label>
+<input type="password" class="pin-input" id="mpwConfirm" placeholder="새 비밀번호 재입력" onkeydown="if(event.key==='Enter')saveMaidPassword()"></div>
+<div class="pin-error" id="mpwError"></div>
+<button class="pin-save-btn" onclick="saveMaidPassword()">저장하기</button>
+<button class="pin-cancel-btn" onclick="closeMaidPwModal()">취소</button>
 </div>
 </div>
 
