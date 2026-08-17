@@ -307,14 +307,14 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 <div id="tabRooms" class="content">
 <div class="stats-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:8px">
 <div class="stat-card s-all active-filter" id="statCardAll" onclick="setFilter('all')"><div class="stat-num" id="cntAll" style="color:var(--accent)">0</div><div class="stat-label">🏠 전체 / All</div></div>
-<div class="stat-card s-occupied" id="statCard0" onclick="setFilter('occupied')"><div class="stat-num" id="cnt0">0</div><div class="stat-label">💗 재실 / Occupied</div></div>
-<div class="stat-card s-uncleaned" id="statCard1" onclick="setFilter('uncleaned')"><div class="stat-num" id="cnt1">0</div><div class="stat-label">🔴 미정비 / Uncleaned</div></div>
-<div class="stat-card s-cleaning" id="statCard2" onclick="setFilter('cleaning')"><div class="stat-num" id="cnt2">0</div><div class="stat-label">🟡 정비중 / Cleaning</div></div>
+<div class="stat-card s-occupied" id="statCard0" onclick="setFilter('occupied')"><div class="stat-num" id="cnt0">0</div><div class="stat-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>재실 / Occupied</div></div>
+<div class="stat-card s-uncleaned" id="statCard1" onclick="setFilter('uncleaned')"><div class="stat-num" id="cnt1">0</div><div class="stat-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>미정비 / Uncleaned</div></div>
+<div class="stat-card s-cleaning" id="statCard2" onclick="setFilter('cleaning')"><div class="stat-num" id="cnt2">0</div><div class="stat-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><path d="M5 20l6-6M9 16l7-7 3 3-7 7M13 12l4 4"/></svg>정비중 / Cleaning</div></div>
 </div>
 <div class="stats-row" style="grid-template-columns:repeat(3,1fr)">
-<div class="stat-card s-inspection" id="statCard3" onclick="setFilter('inspection')"><div class="stat-num" id="cnt3">0</div><div class="stat-label">◻️ 인스펙션 / Inspection</div></div>
-<div class="stat-card s-vacant" id="statCard4" onclick="setFilter('vacant')"><div class="stat-num" id="cnt4">0</div><div class="stat-label">🟢 공실완료 / Vacant</div></div>
-<div class="stat-card s-broken" id="statCard5" onclick="setFilter('broken')"><div class="stat-num" id="cnt5">0</div><div class="stat-label">🔶 고장 / Broken</div></div>
+<div class="stat-card s-inspection" id="statCard3" onclick="setFilter('inspection')"><div class="stat-num" id="cnt3">0</div><div class="stat-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><circle cx="10" cy="10" r="6"/><path d="M21 21l-5-5"/></svg>인스펙션 / Inspection</div></div>
+<div class="stat-card s-vacant" id="statCard4" onclick="setFilter('vacant')"><div class="stat-num" id="cnt4">0</div><div class="stat-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M4 12H1M23 12h-3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>공실완료 / Vacant</div></div>
+<div class="stat-card s-broken" id="statCard5" onclick="setFilter('broken')"><div class="stat-num" id="cnt5">0</div><div class="stat-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><rect x="3" y="6" width="18" height="12" rx="1"/><path d="M9 6l-2 6 3 2-2 4"/></svg>고장 / Broken</div></div>
 </div>
 <div class="maid-stats-section" id="maidStatsSection" style="display:none">
 <div class="maid-stats-title">👥 메이드별 현황</div>
@@ -322,12 +322,12 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 </div>
 <div class="filter-row" style="display:none">
 <button class="filter-btn active" data-filter="all" onclick="setFilter('all')">전체 / All</button>
-<button class="filter-btn" data-filter="occupied" onclick="setFilter('occupied')">🩷 재실 / Occupied</button>
-<button class="filter-btn" data-filter="uncleaned" onclick="setFilter('uncleaned')">🔴 미정비 / Uncleaned</button>
-<button class="filter-btn" data-filter="cleaning" onclick="setFilter('cleaning')">🟡 정비중 / Cleaning</button>
-<button class="filter-btn" data-filter="inspection" onclick="setFilter('inspection')">🟣 인스펙션 / Inspection</button>
-<button class="filter-btn" data-filter="vacant" onclick="setFilter('vacant')">💚 공실완료 / Vacant</button>
-<button class="filter-btn" data-filter="broken" onclick="setFilter('broken')">🔶 고장 / Broken</button>
+<button class="filter-btn" data-filter="occupied" onclick="setFilter('occupied')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>재실 / Occupied</button>
+<button class="filter-btn" data-filter="uncleaned" onclick="setFilter('uncleaned')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>미정비 / Uncleaned</button>
+<button class="filter-btn" data-filter="cleaning" onclick="setFilter('cleaning')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><path d="M5 20l6-6M9 16l7-7 3 3-7 7M13 12l4 4"/></svg>정비중 / Cleaning</button>
+<button class="filter-btn" data-filter="inspection" onclick="setFilter('inspection')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><circle cx="10" cy="10" r="6"/><path d="M21 21l-5-5"/></svg>인스펙션 / Inspection</button>
+<button class="filter-btn" data-filter="vacant" onclick="setFilter('vacant')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M4 12H1M23 12h-3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>공실완료 / Vacant</button>
+<button class="filter-btn" data-filter="broken" onclick="setFilter('broken')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><rect x="3" y="6" width="18" height="12" rx="1"/><path d="M9 6l-2 6 3 2-2 4"/></svg>고장 / Broken</button>
 </div>
 <button class="select-mode-btn" id="selectModeBtn" style="display:none" onclick="toggleSelectMode()">☑ 객실 선택 (일괄 상태변경)</button>
 <button class="assign-mode-btn" id="assignModeBtn" style="display:none" onclick="toggleAssignMode()">👤 메이드 일괄 배정</button>
@@ -373,14 +373,14 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 <div class="room-type-lg" id="mRoomType"></div>
 <div class="modal-section"><label>상태 변경 / Change Status</label>
 <div class="status-btns-row">
-<button class="status-btn status-btn-admin" onclick="selStatus('occupied')">🩷 재실<br><small>Occupied</small></button>
-<button class="status-btn status-btn-admin" onclick="selStatus('uncleaned')">🔴 미정비<br><small>Uncleaned</small></button>
-<button class="status-btn status-btn-admin" onclick="selStatus('broken')">🔶 고장<br><small>Broken</small></button>
+<button class="status-btn status-btn-admin" onclick="selStatus('occupied')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>재실<br><small>Occupied</small></button>
+<button class="status-btn status-btn-admin" onclick="selStatus('uncleaned')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>미정비<br><small>Uncleaned</small></button>
+<button class="status-btn status-btn-admin" onclick="selStatus('broken')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><rect x="3" y="6" width="18" height="12" rx="1"/><path d="M9 6l-2 6 3 2-2 4"/></svg>고장<br><small>Broken</small></button>
 </div>
 <div class="status-btns-row">
-<button class="status-btn" onclick="selStatus('cleaning')">🟡 정비중<br><small>Cleaning</small></button>
-<button class="status-btn" onclick="selStatus('inspection')">⬜ 인스펙션필요<br><small>Inspection</small></button>
-<button class="status-btn status-btn-admin" onclick="selStatus('vacant')">🟢 공실완료<br><small>Vacant</small></button>
+<button class="status-btn" onclick="selStatus('cleaning')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><path d="M5 20l6-6M9 16l7-7 3 3-7 7M13 12l4 4"/></svg>정비중<br><small>Cleaning</small></button>
+<button class="status-btn" onclick="selStatus('inspection')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><circle cx="10" cy="10" r="6"/><path d="M21 21l-5-5"/></svg>인스펙션필요<br><small>Inspection</small></button>
+<button class="status-btn status-btn-admin" onclick="selStatus('vacant')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M4 12H1M23 12h-3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>공실완료<br><small>Vacant</small></button>
 </div>
 </div>
 <div class="modal-section" id="maidSec"><label>메이드 배정 (관리자)</label><div class="maid-picker" id="maidPicker"></div><div class="maid-selected-display" id="maidSelectedDisplay"></div><input type="hidden" id="maidInput"></div>
