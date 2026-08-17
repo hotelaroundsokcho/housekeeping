@@ -2,8 +2,7 @@ const API = 'https://script.google.com/macros/s/AKfycbzEZj1UW3bejogNEuqmThCZNPlF
 let S = {
 role:null, name:'', rooms:[], filter:'all',
 room:null, status:null, chatSince:null,
-isInspector:false, selectMode:false, selected:new Set(),
-assignMode:false, assignSelected:new Set(),
+isInspector:false, batchMode:false, batchSelected:new Set(), batchAction:'status',
 todayInspector:'',
   crossInspection:false,
   maidFilter:'',
@@ -143,7 +142,7 @@ clearInterval(timer);
 sessionStorage.removeItem('hk_role');
 sessionStorage.removeItem('hk_name');
 sessionStorage.removeItem('hk_maid_pwset');
-S={role:null,name:'',rooms:[],filter:'all',room:null,status:null,chatSince:null,selectMode:false,selected:new Set(),assignMode:false,assignSelected:new Set(),maidPasswordSet:false,pendingLoginUser:null};_prevRoomMap=null;_popupQueue=[];_popupRunning=false;
+S={role:null,name:'',rooms:[],filter:'all',room:null,status:null,chatSince:null,batchMode:false,batchSelected:new Set(),batchAction:'status',maidPasswordSet:false,pendingLoginUser:null};_prevRoomMap=null;_popupQueue=[];_popupRunning=false;
 $('loginScreen').style.display='flex';$('app').style.display='none';
 const pwEl=$('loginPwInput');if(pwEl)pwEl.value='';
 $('loginPwGroup').style.display='none';
@@ -154,7 +153,7 @@ document.querySelectorAll('.user-card').forEach(b=>b.classList.remove('active'))
 async function go(){
 $('loginScreen').style.display='none';$('app').style.display='flex';
 $('headerSub').textContent=S.role==='admin'?'관리자('+S.name+')':S.name+' 님';
-['resetBtn','maidSec','changePinBtn','maidMgmtBtn','adminMgmtBtn','inspectorMgmtBtn','reportBtn','maidStatsSection','selectModeBtn','assignModeBtn'].forEach(id=>{
+['resetBtn','maidSec','changePinBtn','maidMgmtBtn','adminMgmtBtn','inspectorMgmtBtn','reportBtn','maidStatsSection','batchModeBtn'].forEach(id=>{
 const el=$(id);if(el)el.style.display=S.role==='admin'?'block':'none';
 });
 const mpwBtn=$('maidPwBtn');if(mpwBtn)mpwBtn.style.display=S.role==='maid'?'block':'none';
@@ -365,37 +364,50 @@ html+='<div class="tl-item">'+
 });
 return html;
 }
-// ───────── 일괄 상태변경 선택 모드 ─────────
-function toggleSelectMode(){
-if(S.assignMode) toggleAssignMode();
-S.selectMode=!S.selectMode;
-S.selected=new Set();
-const btn=$('selectModeBtn');
-if(S.selectMode){
-btn.textContent='✖ 선택 취소';
-btn.style.background='rgba(245,158,11,.15)';
-btn.style.borderColor='rgba(245,158,11,.4)';
-btn.style.color='var(--cleaning)';
-$('bulkBar').style.display='flex';const sab=$('selectAllBtn');if(sab)sab.style.display='inline-block';
+// ───────── 일괄 작업 모드 (상태변경 + 메이드배정 통합, Phase 3) ─────────
+function toggleBatchMode(){
+S.batchMode=!S.batchMode;
+S.batchSelected=new Set();
+const btn=$('batchModeBtn');
+if(S.batchMode){
+btn.textContent='✖ 일괄 작업 취소';
+btn.style.background='rgba(124,92,46,.15)';
+btn.style.borderColor='rgba(124,92,46,.4)';
+btn.style.color='var(--accent)';
+$('batchBar').style.display='flex';
+const sab=$('selectAllBtn');if(sab)sab.style.display='inline-block';
+setBatchAction('status');
 }else{
-btn.textContent='☑ 객실 선택 (일괄 상태변경)';
+btn.textContent='☑ 일괄 작업 (상태변경·배정)';
 btn.style.background='rgba(59,130,246,.1)';
 btn.style.borderColor='rgba(59,130,246,.3)';
 btn.style.color='var(--occupied)';
-$('bulkBar').style.display='none';
-}const sab2=$('selectAllBtn');if(sab2)sab2.style.display='none';
-updateBulkBar();render();
+$('batchBar').style.display='none';
+const sab2=$('selectAllBtn');if(sab2)sab2.style.display='none';
+}
+updateBatchBar();render();
 }
 
-function toggleSelect(no){
-if(S.selected.has(no))S.selected.delete(no);
-else S.selected.add(no);
-updateBulkBar();render();
+function toggleBatchSelect(no){
+if(S.batchSelected.has(no))S.batchSelected.delete(no);
+else S.batchSelected.add(no);
+updateBatchBar();render();
 }
 
-function updateBulkBar(){
-const cnt=S.selected.size;
-$('bulkCount').textContent=cnt+'개 선택됨';
+function setBatchAction(action){
+S.batchAction=action;
+const st=$('batchTabStatus'),as=$('batchTabAssign');
+if(st)st.classList.toggle('active',action==='status');
+if(as)as.classList.toggle('active',action==='assign');
+const sp=$('batchStatusPanel'),ap=$('assignMaidBtns');
+if(sp)sp.style.display=action==='status'?'flex':'none';
+if(ap){ap.style.display=action==='assign'?'flex':'none';if(action==='assign')loadAssignBar();}
+updateBatchBar();
+}
+
+function updateBatchBar(){
+const cnt=S.batchSelected.size;
+const cntEl=$('batchCount');if(cntEl)cntEl.textContent=cnt+'개 선택됨';
 document.querySelectorAll('.bulk-status-btn').forEach(function(b){
 b.disabled=cnt===0;
 b.style.opacity=cnt===0?'0.35':'1';
@@ -405,18 +417,18 @@ function selectAllVisible(){
   let rooms=S.rooms;
   if(S.filter!=='all')rooms=rooms.filter(x=>x.status===S.filter);
   if(S.role==='maid')rooms=rooms.filter(x=>x.maidName&&x.maidName.split(',').map(n=>n.trim().toLowerCase()).includes(S.name.toLowerCase()));
-  rooms.forEach(r=>S.selected.add(String(r.roomNo)));
-  updateBulkBar();
+  rooms.forEach(r=>S.batchSelected.add(String(r.roomNo)));
+  updateBatchBar();
   render();
 }
 
 async function bulkSetStatus(status){
 const KR_LABEL={occupied:'재실',uncleaned:'미정비',cleaning:'정비중',inspection:'인스펙션필요',vacant:'공실완료',broken:'고장'};
-const cnt=S.selected.size;if(!cnt)return;
+const cnt=S.batchSelected.size;if(!cnt)return;
 const label=KR_LABEL[status]||status;
 if(!confirm(cnt+'개 객실을 ['+label+']로 변경합니다.\n계속하시겠습니까?'))return;
-const rooms=[...S.selected];
-toggleSelectMode();
+const rooms=[...S.batchSelected];
+toggleBatchMode();
 showLoad('0 / '+cnt+' 처리 중...');
 let done=0;
 for(const roomNo of rooms){
@@ -426,35 +438,6 @@ $('loadingMsg').textContent=done+' / '+cnt+' 처리 중...';
 }
 await loadRooms(true);hideLoad();
 toast('✅ '+cnt+'개 객실 → '+label+' 일괄 적용 완료');
-}
-
-// ───────── 메이드 일괄 배정 모드 ─────────
-async function toggleAssignMode(){
-if(S.selectMode) toggleSelectMode();
-S.assignMode=!S.assignMode;
-S.assignSelected=new Set();
-const btn=$('assignModeBtn');
-if(S.assignMode){
-btn.textContent='✖ 배정 취소';
-btn.style.background='rgba(74,222,128,.1)';
-btn.style.borderColor='rgba(74,222,128,.3)';
-btn.style.color='var(--vacant)';
-await loadAssignBar();
-$('bulkAssignBar').style.display='flex';
-}else{
-btn.textContent='👤 메이드 일괄 배정';
-btn.style.background='rgba(167,139,250,.1)';
-btn.style.borderColor='rgba(167,139,250,.3)';
-btn.style.color='#a78bfa';
-$('bulkAssignBar').style.display='none';
-}
-updateAssignBar();render();
-}
-
-function toggleAssignSelect(no){
-if(S.assignSelected.has(no))S.assignSelected.delete(no);
-else S.assignSelected.add(no);
-updateAssignBar();render();
 }
 
 function loadAssignBar(){
@@ -509,19 +492,13 @@ btnWrap.appendChild(clr);
 renderAssignPicker();
 }
 
-function updateAssignBar(){
-const cnt=S.assignSelected.size;
-const countEl=$('assignCount');
-if(countEl)countEl.textContent=cnt+'개 객실 선택됨';
-}
-
 async function execBulkAssign(maidName){
-const cnt=S.assignSelected.size;
+const cnt=S.batchSelected.size;
 if(!cnt){toast('객실을 먼저 선택하세요');return;}
 const label=maidName?maidName:'배정 해제';
 if(!confirm(cnt+'개 객실을 ['+label+']로 배정합니다.\n계속하시겠습니까?'))return;
-const rooms=[...S.assignSelected];
-toggleAssignMode();
+const rooms=[...S.batchSelected];
+toggleBatchMode();
 showLoad('0 / '+cnt+' 처리 중...');
 let done=0;
 for(const roomNo of rooms){
@@ -683,8 +660,8 @@ function render(){
 
 function buildCard(room, isDone){
   const no=String(room.roomNo);
-  const isSel=S.selected.has(no);
-  const isAssignSel=S.assignSelected.has(no);
+  const isSel=S.batchSelected.has(no);
+  const isAssignSel=isSel&&S.batchAction==='assign';
   const card=document.createElement('div');
   const firstMaid=room.maidName?room.maidName.split(',')[0].trim():'';
   const assignedIdx=getMaidColorIdx(firstMaid);
@@ -692,9 +669,9 @@ function buildCard(room, isDone){
   const theme=STATUS_CARD_THEME[room.status]||STATUS_CARD_THEME.inspection;
 
   const _isUnassignCleaning=(room.status==='cleaning'&&!room.maidName);
-  card.className='room-card'+(isSel||isAssignSel?' card-selected':'')+(_isUnassignCleaning?' cleaning-unassigned':'');
+  card.className='room-card'+(isSel?' card-selected':'')+(_isUnassignCleaning?' cleaning-unassigned':'');
   card.style.background=theme.bg;
-  card.style.border=_isUnassignCleaning?'2px dashed #f59e0b':'1px solid '+(isSel||isAssignSel?'#ef4444':theme.border);
+  card.style.border=_isUnassignCleaning?'2px dashed #f59e0b':'1px solid '+(isSel?'#ef4444':theme.border);
   if(isDone) card.style.opacity='0.5';
   if(maidColor&&!isAssignSel){card.style.borderLeft='5px solid '+maidColor;}
   if(isAssignSel){card.style.borderLeft='5px solid #4ade80';card.style.boxShadow='0 0 0 2px rgba(74,222,128,.35)';}
@@ -721,13 +698,10 @@ function buildCard(room, isDone){
     '<div class="room-status status-'+room.status+'">'+(STATUS_ICON[room.status]||'')+KR[room.status]+'</div>'+
     (room.inspectorName&&room.status==='inspection'?'<div class="room-inspector-badge">🔍 '+esc(room.inspectorName)+'</div>':'')+maidHtml+timeHtml;
 
-  if(S.selectMode&&S.role==='admin'){
-    card.innerHTML='<div class="card-check">'+(isSel?'☑':'☐')+'</div>'+innerHtml;
-    card.onclick=function(){toggleSelect(no);};
-  }else if(S.assignMode&&S.role==='admin'){
-    card.innerHTML='<div class="card-check" style="color:'+(isAssignSel?'var(--vacant)':'var(--text2)')+'">'
-      +(isAssignSel?'☑':'☐')+'</div>'+innerHtml;
-    card.onclick=function(){toggleAssignSelect(no);};
+  if(S.batchMode&&S.role==='admin'){
+    card.innerHTML='<div class="card-check" style="color:'+(isSel?'var(--accent)':'var(--text2)')+'">'
+      +(isSel?'☑':'☐')+'</div>'+innerHtml;
+    card.onclick=function(){toggleBatchSelect(no);};
   }else{
     card.innerHTML=innerHtml;
     card.onclick=function(){openRoom(no);};
@@ -735,7 +709,7 @@ function buildCard(room, isDone){
   return card;
 }
 async function openRoom(no){
-if(S.selectMode||S.assignMode)return;
+if(S.batchMode)return;
 no=String(no);
 S.room=S.rooms.find(r=>String(r.roomNo)===no);
 if(!S.room){toast('오류: 객실 없음 '+no);return;}
