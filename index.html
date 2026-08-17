@@ -237,7 +237,10 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 
 /* ── 일괄 상태변경 바 ── */
 .bulk-bar{flex-direction:column;gap:8px;padding:12px 14px;}
-.bulk-bar-top{display:flex;align-items:center;justify-content:center;}<button id="selectAllBtn" class="select-all-btn" onclick="selectAllVisible()" style="display:none">현재 화면 전체선택</button>
+.bulk-bar-top{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.batch-tabs{display:flex;background:var(--surface2);border-radius:10px;padding:3px;gap:3px;}
+.batch-tab-btn{flex:1;padding:7px 4px;border:none;background:transparent;color:var(--text2);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;}
+.batch-tab-btn.active{background:var(--surface);color:var(--text);}
 .bulk-status-btns{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;}
 .bulk-status-btn{flex:1 1 calc(33% - 7px);min-width:80px;padding:9px 6px;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;transition:opacity .2s;}
 .bulk-s-occupied{background:#9d174d;color:#fff;}
@@ -316,8 +319,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 <button class="filter-btn" data-filter="vacant" onclick="setFilter('vacant')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M4 12H1M23 12h-3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>공실완료 / Vacant</button>
 <button class="filter-btn" data-filter="broken" onclick="setFilter('broken')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><rect x="3" y="6" width="18" height="12" rx="1"/><path d="M9 6l-2 6 3 2-2 4"/></svg>고장 / Broken</button>
 </div>
-<button class="select-mode-btn" id="selectModeBtn" style="display:none" onclick="toggleSelectMode()">☑ 객실 선택 (일괄 상태변경)</button>
-<button class="assign-mode-btn" id="assignModeBtn" style="display:none" onclick="toggleAssignMode()">👤 메이드 일괄 배정</button>
+<button class="select-mode-btn" id="batchModeBtn" style="display:none" onclick="toggleBatchMode()">☑ 일괄 작업 (상태변경·배정)</button>
 <button class="reset-btn" id="resetBtn" style="display:none" onclick="confirmReset()">⚠️ 전체 초기화 (긴급용)</button>
 <button class="maid-mgmt-btn" id="maidMgmtBtn" style="display:none" onclick="openMaidMgmtModal()">👥 메이드 명단 관리</button>
         <button class="maid-mgmt-btn" id="adminMgmtBtn" style="display:none" onclick="openAdminMgmtModal()">👔 관리자 명단 관리</button>
@@ -338,9 +340,13 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 </div>
 </div>
 </div>
-<div class="bulk-bar" id="bulkBar">
-<div class="bulk-bar-top"><span class="bulk-count" id="bulkCount">0개 선택됨</span></div>
-<div class="bulk-status-btns">
+<div class="bulk-bar" id="batchBar">
+<div class="bulk-bar-top"><span class="bulk-count" id="batchCount">0개 선택됨</span><button id="selectAllBtn" class="select-all-btn" onclick="selectAllVisible()">현재 화면 전체선택</button></div>
+<div class="batch-tabs">
+<button class="batch-tab-btn active" id="batchTabStatus" onclick="setBatchAction('status')">상태변경</button>
+<button class="batch-tab-btn" id="batchTabAssign" onclick="setBatchAction('assign')">메이드배정</button>
+</div>
+<div class="bulk-status-btns" id="batchStatusPanel">
 <button class="bulk-status-btn bulk-s-occupied" onclick="bulkSetStatus('occupied')" disabled>💗 재실<br><small>Occupied</small></button>
 <button class="bulk-status-btn bulk-s-uncleaned" onclick="bulkSetStatus('uncleaned')" disabled>🔴 미정비<br><small>Uncleaned</small></button>
 <button class="bulk-status-btn bulk-s-cleaning" onclick="bulkSetStatus('cleaning')" disabled>🟡 정비중<br><small>Cleaning</small></button>
@@ -348,10 +354,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 <button class="bulk-status-btn bulk-s-vacant" onclick="bulkSetStatus('vacant')" disabled>🟢 공실완료<br><small>Vacant</small></button>
 <button class="bulk-status-btn bulk-s-broken" onclick="bulkSetStatus('broken')" disabled>🔶 고장<br><small>Broken</small></button>
 </div>
-</div>
-<div class="bulk-assign-bar" id="bulkAssignBar">
-<div class="bulk-assign-top"><span class="assign-count" id="assignCount">0개 객실 선택됨</span><span style="font-size:11px;color:var(--text2)">객실 선택 후 메이드 버튼 클릭</span></div>
-<div class="assign-maid-btns" id="assignMaidBtns"></div>
+<div class="assign-maid-btns" id="assignMaidBtns" style="display:none"></div>
 </div>
 <div class="modal-overlay" id="roomModal" onclick="closeModal(event)">
 <div class="modal">
