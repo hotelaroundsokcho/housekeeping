@@ -160,6 +160,11 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 .room-type-lg{font-size:12px;color:var(--text2);margin-bottom:20px;}
 .modal-section{margin-bottom:20px;}
 .modal-section label{display:block;font-size:12px;color:var(--text2);margin-bottom:8px;font-weight:600;}
+.modal-tabs{display:flex;gap:6px;margin-bottom:16px;border-bottom:1px solid var(--border);}
+.modal-tab-btn{flex:1;padding:10px 0;font-size:13px;font-weight:600;border:none;background:none;color:var(--text2);border-bottom:2px solid transparent;cursor:pointer;}
+.modal-tab-btn.active{color:var(--text);border-bottom-color:var(--accent);}
+.modal-tab-pane{display:none;}
+.modal-tab-pane.active{display:block;}
 .status-btns-top{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:8px;}
 .status-btns-bottom{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
 .status-btn{padding:12px 6px;border-radius:10px;border:2px solid var(--border);background:var(--surface2);color:var(--text);font-size:11px;font-weight:600;cursor:pointer;text-align:center;line-height:1.4;}
@@ -361,6 +366,12 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 <div class="modal-handle"></div>
 <h3 id="mRoomNo"></h3>
 <div class="room-type-lg" id="mRoomType"></div>
+<div class="modal-tabs" id="mTabs">
+<button class="modal-tab-btn active" data-tab="status" onclick="switchModalTab('status')">상태변경</button>
+<button class="modal-tab-btn" data-tab="note" onclick="switchModalTab('note')">메모</button>
+<button class="modal-tab-btn" data-tab="hist" onclick="switchModalTab('hist')">이력</button>
+</div>
+<div class="modal-tab-pane active" id="mPaneStatus">
 <div class="modal-section"><label>상태 변경 / Change Status</label>
 <div class="status-btns-row">
 <button class="status-btn status-btn-admin" onclick="selStatus('occupied')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>재실<br><small>Occupied</small></button>
@@ -375,9 +386,14 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 </div>
 <div class="modal-section" id="maidSec"><label>메이드 배정 (관리자)</label><div class="maid-picker" id="maidPicker"></div><div class="maid-selected-display" id="maidSelectedDisplay"></div><input type="hidden" id="maidInput"></div>
 <div class="modal-section" id="inspectorOverrideSection" style="display:none"><label>🔍 인스펙터 변경 / Change Inspector</label><select id="inspectorOverridePicker" style="width:100%;padding:8px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:14px;" onchange="this.dataset.changed='1'"></select></div>
+</div>
+<div class="modal-tab-pane" id="mPaneNote">
 <div class="modal-section"><label>메모 추가</label><textarea class="note-input" id="noteInput" placeholder="특이사항..."></textarea></div>
 <div class="modal-section"><label>메모 이력</label><div class="notes-list" id="notesList"></div></div>
+</div>
+<div class="modal-tab-pane" id="mPaneHist">
 <div class="notes-section" style="margin-top:14px"><div class="notes-label" style="font-size:13px;color:var(--text2);margin-bottom:6px">변경 이력 / History</div><div id="historyList"></div></div>
+</div>
 <button class="modal-save-btn" onclick="saveRoom()">저장 / Save</button>
 </div>
 </div>
