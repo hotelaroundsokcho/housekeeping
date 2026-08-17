@@ -720,6 +720,7 @@ $('mRoomNo').textContent=no+'호';
 $('mRoomType').textContent=S.room.typeName||'';
 $('maidInput').value=S.room.maidName||'';
 $('noteInput').value='';
+switchModalTab('status');
 const modalTime=$('mModalTime');
 if(modalTime){
 const ts=fmtCardTime(S.room.updatedAt);
@@ -795,6 +796,15 @@ display.textContent=currentMaid?'배정: '+currentMaid:'배정 없음';
 }
 function closeModal(e){if(e.target.id==='roomModal'){$('roomModal').classList.remove('open');S.room=null;}}
 function selStatus(s){S.status=s;updBtns();}
+function switchModalTab(tab){
+const map={status:'mPaneStatus',note:'mPaneNote',hist:'mPaneHist'};
+Object.keys(map).forEach(function(k){
+const pane=$(map[k]);if(pane)pane.classList.toggle('active',k===tab);
+});
+document.querySelectorAll('.modal-tab-btn').forEach(function(b){
+b.classList.toggle('active',b.getAttribute('data-tab')===tab);
+});
+}
 
 function updBtns(){
 const map={occupied:0,uncleaned:1,broken:2,cleaning:3,inspection:4,vacant:5};
