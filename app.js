@@ -7,7 +7,8 @@ todayInspector:'',
   crossInspection:false,
   maidFilter:'',
 maidPasswordSet:false,
-pendingLoginUser:null
+pendingLoginUser:null,
+lang:''
 };
 let timer = null;
 const MAID_COLOR_MAP = {};
@@ -28,6 +29,32 @@ vacant:'공실완료 / Vacant',
 broken:'고장 / Broken',
 cleaned:'인스펙션필요 / Inspection'
 };
+
+const LANG={
+  ko:{tabStatus:'상태변경',tabNote:'메모',tabHist:'이력',cleaning:'정비중',inspection:'인스펙션필요',save:'저장',logout:'로그아웃',enter:'입장하기',loading:'로딩 중...',processing:'처리 중...',authenticating:'인증 중...',notePlaceholder:'특이사항...',saveSuccess:'저장되었습니다',saveFail:'저장 실패',loadFail:'로드실패',error:'오류',myPassword:'내 비밀번호 설정/변경'},
+  en:{tabStatus:'Status',tabNote:'Notes',tabHist:'History',cleaning:'Cleaning',inspection:'Inspection',save:'Save',logout:'Log out',enter:'Enter',loading:'Loading...',processing:'Processing...',authenticating:'Authenticating...',notePlaceholder:'Notes...',saveSuccess:'Saved',saveFail:'Save failed',loadFail:'Load failed',error:'Error',myPassword:'Set/Change my password'},
+  mn:{tabStatus:'Төлөв өөрчлөх',tabNote:'Тэмдэглэл',tabHist:'Түүх',cleaning:'Цэвэрлэж байна',inspection:'Шалгалт шаардлагатай',save:'Хадгалах',logout:'Гарах',enter:'Орох',loading:'Ачааллаж байна...',processing:'Боловсруулж байна...',authenticating:'Баталгаажуулж байна...',notePlaceholder:'Онцлог зүйл...',saveSuccess:'Хадгалагдлаа',saveFail:'Хадгалахад алдаа гарлаа',loadFail:'Ачаалахад алдаа гарлаа',error:'Алдаа',myPassword:'Миний нууц үг тохируулах/солих'},
+  ru:{tabStatus:'Изменить статус',tabNote:'Заметки',tabHist:'История',cleaning:'Уборка',inspection:'Требуется проверка',save:'Сохранить',logout:'Выйти',enter:'Войти',loading:'Загрузка...',processing:'Обработка...',authenticating:'Проверка...',notePlaceholder:'Особые заметки...',saveSuccess:'Сохранено',saveFail:'Ошибка сохранения',loadFail:'Ошибка загрузки',error:'Ошибка',myPassword:'Изменить мой пароль'},
+};
+function t(key){var l=(LANG[S.lang]&&LANG[S.lang][key])?LANG[S.lang][key]:null;return l!==null?l:(LANG.ko[key]||key);}
+function applyMaidLang(){
+  if(S.role!=='maid')return;
+  var lb=$('logoutBtn');if(lb)lb.textContent=t('logout');
+  var sc=document.querySelector('#statusBtnCleaning .sbLabel');if(sc)sc.textContent=t('cleaning');
+  var si=document.querySelector('#statusBtnInspection .sbLabel');if(si)si.textContent=t('inspection');
+  var tt=document.querySelector('#mTabs [data-tab=\"status\"]');if(tt)tt.textContent=t('tabStatus');
+  var tn=document.querySelector('#mTabs [data-tab=\"note\"]');if(tn)tn.textContent=t('tabNote');
+  var th=document.querySelector('#mTabs [data-tab=\"hist\"]');if(th)th.textContent=t('tabHist');
+  var ni=$('noteInput');if(ni)ni.placeholder=t('notePlaceholder');
+  var mp=$('maidPwBtn');if(mp)mp.textContent='\uD83D\uDD11 '+t('myPassword');
+}
+function pickMaidLang(code){
+  S.lang=code;
+  sessionStorage.setItem('hk_maid_lang',code);
+  api({action:'setMaidLang',name:S.name,lang:code});
+  $('langPickModal').classList.remove('open');
+  go();
+}
 
 const KR_CHAT = {
 occupied:'재실', uncleaned:'미정비', cleaning:'정비중',
@@ -120,8 +147,8 @@ const r=await api({action:'verifyMaid',name:u.apiName,password:pwHash});
 hideLoad();
 if(r.ok){
 const canonName=r.name||u.name;
-S.role='maid';S.name=canonName;S.isInspector=!!(r.isInspector);S.maidPasswordSet=!!r.passwordSet;
-sessionStorage.setItem('hk_role','maid');sessionStorage.setItem('hk_name',canonName);sessionStorage.setItem('hk_inspector',r.isInspector?'1':'0');sessionStorage.setItem('hk_maid_pwset',r.passwordSet?'1':'0');go();
+S.role='maid';S.name=canonName;S.isInspector=!!(r.isInspector);S.maidPasswordSet=!!r.passwordSet;S.lang=r.lang||'';
+sessionStorage.setItem('hk_role','maid');sessionStorage.setItem('hk_name',canonName);sessionStorage.setItem('hk_inspector',r.isInspector?'1':'0');sessionStorage.setItem('hk_maid_pwset',r.passwordSet?'1':'0');sessionStorage.setItem('hk_maid_lang',S.lang);go();
 }else{
 $('loginError').textContent=r.error||'로그인 실패';
 if(r.passwordRequired)$('loginPwInput').focus();
@@ -151,6 +178,7 @@ $('loginError').textContent='';
 document.querySelectorAll('.user-card').forEach(b=>b.classList.remove('active'));
 }
 async function go(){
+if(S.role==='maid'&&!S.lang){$('langPickModal').classList.add('open');return;}
 $('loginScreen').style.display='none';$('app').style.display='flex';
 $('headerSub').textContent=S.role==='admin'?'관리자('+S.name+')':S.name+' 님';
 ['resetBtn','maidSec','changePinBtn','maidMgmtBtn','adminMgmtBtn','inspectorMgmtBtn','reportBtn','maidStatsSection','batchModeBtn'].forEach(id=>{
@@ -158,7 +186,7 @@ const el=$(id);if(el)el.style.display=S.role==='admin'?'block':'none';
 });
 const mpwBtn=$('maidPwBtn');if(mpwBtn)mpwBtn.style.display=S.role==='maid'?'block':'none';
 ['statCard0','statCard1','statCard4','statCard5'].forEach(function(id){var el=$(id);if(el)el.style.display=S.role==='admin'?'':'none';});
-showLoad('로딩 중...');
+applyMaidLang();showLoad(S.role==='maid'?t('loading'):'로딩 중...');
 if(S.role==='admin'){const mr=await api({action:'getMaids'});S.maids=(mr.ok&&mr.maids)?mr.maids:[];const tr=await api({action:'getTodayInspector'});S.todayInspector=(tr.ok&&tr.inspector)?tr.inspector:'';renderTodayInspectorBar();}
 if(S.role==='admin'){const cr=await api({action:'getCrossInspection'});if(cr.ok)S.crossInspection=cr.enabled;renderTodayInspectorBar();}
 await loadRooms();
