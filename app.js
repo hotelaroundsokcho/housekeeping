@@ -243,7 +243,6 @@ if(tally[name][_st]!==undefined)tally[name][_st]++;
 });
 const names=Object.keys(tally);
 if(!names.length){box.innerHTML='<div style="color:var(--text2);font-size:12px;padding:8px">배정된 메이드 없음</div>';return;}
-box.innerHTML='';
 const openNames=new Set(Array.from(box.querySelectorAll('.maid-stat-card.open')).map(c=>c.dataset.maid));
 box.innerHTML='';
 names.forEach(function(name){
@@ -319,7 +318,7 @@ function tlBadge(statusKey){
 const key=statusKey==='cleaned'?'inspection':statusKey;
 const label=KR_CHAT[key]||key||'';
 const theme=STATUS_CARD_THEME[key]||STATUS_CARD_THEME.inspection;
-return '<span style="font-size:10px;padding:1px 7px;border-radius:8px;font-weight:600;background:'+theme.bg+';color:'+theme.numColor+';white-space:nowrap;">'+esc(label)+'</span>';
+return '<span style="font-size:12px;padding:1px 7px;border-radius:8px;font-weight:600;background:'+theme.bg+';color:'+theme.numColor+';white-space:nowrap;">'+esc(label)+'</span>';
 }
 
 function buildMaidDetailHTML(history,name){
@@ -367,7 +366,7 @@ let html='<div class="hist-stats-row">'+
 
 const roomNos=Object.keys(byRoom);
 if(!roomNos.length){
-html+='<div style="font-size:12px;color:var(--text2);padding:6px 0;">오늘 작업 이력이 없습니다</div>';
+html+='<div style="font-size:14px;color:var(--text2);padding:6px 0;">오늘 작업 이력이 없습니다</div>';
 return html;
 }
 html+='<div class="hist-section-title">오늘 객실별 작업 이력</div>';
@@ -379,14 +378,14 @@ if(typeCode&&typeCode.length>=3){
 const c=typeCode[2].toUpperCase();
 if(c==='T')bedLabel='Twin';else if(c==='D')bedLabel='Double';
 }
-html+='<div style="margin:8px 0 4px;"><span style="font-size:12px;font-weight:600;color:var(--text);margin-right:6px;">'+esc(no)+'</span><span style="font-size:11px;color:var(--text2);">'+esc(bedLabel)+'</span></div>';
+html+='<div style="margin:8px 0 4px;"><span style="font-size:14px;font-weight:600;color:var(--text);margin-right:6px;">'+esc(no)+'</span><span style="font-size:13px;color:var(--text2);">'+esc(bedLabel)+'</span></div>';
 const events=byRoom[no];
 events.forEach(function(h,i){
 const isLast=i===events.length-1;
 html+='<div class="tl-item">'+
 '<div class="tl-left"><div class="tl-dot"></div>'+(isLast?'':'<div class="tl-line"></div>')+'</div>'+
 '<div class="tl-body">'+
-'<div class="tl-detail">'+tlBadge(h.fromStatus)+'<span style="color:var(--text2);font-size:11px;">→</span>'+tlBadge(h.toStatus)+'</div>'+
+'<div class="tl-detail">'+tlBadge(h.fromStatus)+'<span style="color:var(--text2);font-size:13px;">→</span>'+tlBadge(h.toStatus)+'</div>'+
 '<div class="tl-time">'+fmtTimeOnly(h.timestamp)+' KST</div>'+
 '</div></div>';
 });
