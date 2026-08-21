@@ -181,7 +181,7 @@ async function go(){
 if(S.role==='maid'&&!S.lang){$('langPickModal').classList.add('open');return;}
 $('loginScreen').style.display='none';$('app').style.display='flex';
 $('headerSub').textContent=S.role==='admin'?'관리자('+S.name+')':S.name+' 님';
-['resetBtn','maidSec','changePinBtn','maidMgmtBtn','adminMgmtBtn','inspectorMgmtBtn','reportBtn','maidStatsSection','batchModeBtn'].forEach(id=>{
+['settingsBtn','maidSec','maidStatsSection','batchModeBtn'].forEach(id=>{
 const el=$(id);if(el)el.style.display=S.role==='admin'?'block':'none';
 });
 const mpwBtn=$('maidPwBtn');if(mpwBtn)mpwBtn.style.display=S.role==='maid'?'block':'none';
@@ -949,6 +949,8 @@ async function toggleCrossInspection(){
   else toast('설정 실패');
 }
 function closeMaidMgmtModal(e){if(!e||e.target.id==='maidMgmtModal')$('maidMgmtModal').classList.remove('open');}
+function openSettingsModal(){$('settingsModal').classList.add('open');}
+function closeSettingsModal(e){if(!e||e.target.id==='settingsModal')$('settingsModal').classList.remove('open');}
 function openChangePinModal(){
 S.pwSetupMode=false;
 $('cpCurrent').value='';$('cpNew').value='';$('cpConfirm').value='';$('cpError').textContent='';
