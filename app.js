@@ -393,6 +393,16 @@ html+='<div class="tl-item">'+
 return html;
 }
 // ───────── 일괄 작업 모드 (상태변경 + 메이드배정 통합, Phase 3) ─────────
+function syncBatchBarPadding(){
+const bar=$('batchBar');
+const content=document.querySelector('.content');
+if(!bar||!content)return;
+if(S.batchMode&&bar.style.display!=='none'){
+content.style.paddingBottom=(bar.offsetHeight+24)+'px';
+}else{
+content.style.paddingBottom='80px';
+}
+}
 function toggleBatchMode(){
 S.batchMode=!S.batchMode;
 S.batchSelected=new Set();
@@ -414,6 +424,7 @@ $('batchBar').style.display='none';
 const sab2=$('selectAllBtn');if(sab2)sab2.style.display='none';
 }
 updateBatchBar();render();
+syncBatchBarPadding();
 }
 
 function toggleBatchSelect(no){
@@ -431,6 +442,7 @@ const sp=$('batchStatusPanel'),ap=$('assignMaidBtns');
 if(sp)sp.style.display=action==='status'?'flex':'none';
 if(ap){ap.style.display=action==='assign'?'flex':'none';if(action==='assign')loadAssignBar();}
 updateBatchBar();
+syncBatchBarPadding();
 }
 
 function updateBatchBar(){
@@ -516,6 +528,7 @@ clr.style.cssText='background:rgba(239,68,68,.1);border:1.5px solid rgba(239,68,
 clr.textContent='✕ 해제';
 clr.onclick=function(){execBulkAssign('');};
 btnWrap.appendChild(clr);
+syncBatchBarPadding();
 }
 renderAssignPicker();
 }
@@ -1585,3 +1598,10 @@ row.appendChild(tog);
 box.appendChild(row);
 });
 }
+
+(function(){
+const _bb=$('batchBar');
+if(_bb&&window.ResizeObserver){
+new ResizeObserver(function(){syncBatchBarPadding();}).observe(_bb);
+}
+})();
