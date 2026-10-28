@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>계정 설정 | Hotel Around Sokcho</title>
+<style>
+:root {
+  --bg: #0f1117; --surface: #1a1d27; --surface2: #22263a;
+  --border: #2e3248; --accent: #6c8fff;
+  --text: #e8eaf0; --text2: #8b91a8;
+  --radius: 12px;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text);
+  font-family: -apple-system, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }
+#loginScreen { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px 16px; }
+.card { width: 100%; max-width: 380px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px; padding: 26px 22px 22px; }
+.card h1 { margin: 0 0 4px; font-size: 18px; font-weight: 600; letter-spacing: .01em; }
+.card .sub { margin: 0 0 18px; font-size: 12.5px; line-height: 1.55; color: var(--text2); }
+.form-group { margin-bottom: 12px; }
+.form-group label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 5px; }
+.form-group input { width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--border);
+  border-radius: 10px; padding: 11px 12px; font-size: 15px; }
+.form-group input:focus-visible, .btn-primary:focus-visible, .auth-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn-primary { width: 100%; margin-top: 4px; padding: 12px; border-radius: 10px; border: 0;
+  background: var(--accent); color: #0f1117; font-size: 15px; font-weight: 600; cursor: pointer; }
+#app { min-height: 100vh; align-items: center; justify-content: center; padding: 24px 16px; display: none; }
+#app .card { text-align: center; }
+#app .who { font-size: 16px; margin: 6px 0 4px; }
+#app .role { font-size: 12.5px; color: var(--text2); margin-bottom: 16px; }
+#app .hint { font-size: 12.5px; line-height: 1.6; color: var(--text2); margin-bottom: 18px; }
+#app .out { background: transparent; border: 1px solid var(--border); color: var(--text); border-radius: 10px; padding: 10px 14px; font-size: 13px; cursor: pointer; }
+#loadOv { position: fixed; inset: 0; z-index: 2000; display: none; align-items: center; justify-content: center;
+  background: rgba(15,17,23,.72); font-size: 14px; color: var(--text); }
+#loadOv.on { display: flex; }
+@media (prefers-reduced-motion: no-preference) {
+  .card { animation: rise .35s ease-out both; }
+  @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+}
+</style>
+</head>
+<body>
+<div id="loginScreen">
+  <div class="card">
+    <h1>계정 설정 / Account setup</h1>
+    <p class="sub">관리자 계정 생성과 직원 승인에 쓰는 임시 페이지입니다.<br>This is a temporary page for account setup.</p>
+    <div id="authRoot"></div>
+  </div>
+</div>
+
+<div id="app">
+  <div class="card">
+    <h1>로그인됨 / Signed in</h1>
+    <div class="who" id="whoName"></div>
+    <div class="role" id="whoRole"></div>
+    <div class="hint">좌측 하단 👤 버튼에서 승인 대기 중인 계정을 확인하고 승인할 수 있습니다.<br>Use the 👤 button (bottom left) to review pending requests.</div>
+    <button type="button" class="out" id="signOut">로그아웃 / Sign out</button>
+  </div>
+</div>
+
+<div id="loadOv" role="status" aria-live="polite"><span id="loadMsg"></span></div>
+
+<script src="auth.js"></script>
+<script>
+(function () {
+  'use strict';
+  var API = 'https://script.google.com/macros/s/AKfycbxRIVU2M-Df2nbMw4fg9_vtxMFUGi_KRmrfa4EW1-NR5TUeIMihyJxQ313B9gUz154/exec';
+
+  /* auth.js 가 호출하는 전역 (app.js 의 동일 이름 함수와 같은 계약) */
+  window.S = { role: null, name: '' };
+
+  window.api = async function (p) {
+    var r = await fetch(API, { method: 'POST', redirect: 'follow', body: JSON.stringify(AUTH.decorate(p)) });
+    var j = JSON.parse(await r.text());
+    if (j && j.code === 'AUTH_REQUIRED') AUTH.denied();
+    return j;
+  };
+
+  window.showLoad = function (msg) {
+    document.getElementById('loadMsg').textContent = msg || '';
+    document.getElementById('loadOv').classList.add('on');
+  };
+  window.hideLoad = function () { document.getElementById('loadOv').classList.remove('on'); };
+
+  var ROLE = { owner: '보스 / Owner', admin: '관리자 / Admin', maid: '메이드 / Maid' };
+
+  window.go = function () {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('whoName').textContent = S.name || '';
+    document.getElementById('whoRole').textContent = ROLE[S.role] || '';
+    document.getElementById('app').style.display = 'flex';
+  };
+
+  window.logout = function () {
+    S.role = null; S.name = '';
+    document.getElementById('app').style.display = 'none';
+  };
+
+  document.getElementById('signOut').addEventListener('click', function () {
+    AUTH.onLogout();
+    window.logout();
+  });
+
+  AUTH.restore();
+})();
+</script>
+</body>
+</html>
