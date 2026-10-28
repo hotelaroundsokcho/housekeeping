@@ -256,6 +256,9 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 .bulk-s-inspection{background:#5b21b6;color:#fff;}
 .bulk-s-vacant{background:#15803d;color:#fff;}
 .bulk-s-broken{background:#c2410c;color:#fff;}
+.bulk-s-office{background:#64748b;color:#fff;}
+.status-btn.sel-office{border-color:#7a8794;background:rgba(122,135,148,.22);color:#cbd5e1;}
+.room-card.office{opacity:.92;}
 
 /* ── 객실 상태변경 팝업 애니메이션 ── */
 @keyframes rcpSlideIn {
@@ -356,6 +359,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 <button class="bulk-status-btn bulk-s-inspection" onclick="bulkSetStatus('inspection')" disabled>⚪ 인스펙션<br><small>Inspection</small></button>
 <button class="bulk-status-btn bulk-s-vacant" onclick="bulkSetStatus('vacant')" disabled>🟢 공실완료<br><small>Vacant</small></button>
 <button class="bulk-status-btn bulk-s-broken" onclick="bulkSetStatus('broken')" disabled>🔶 고장<br><small>Broken</small></button>
+<button class="bulk-status-btn bulk-s-office" onclick="bulkSetStatus('office')" disabled><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><path d="M3 21h18"/><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"/><path d="M9 8h1"/><path d="M9 12h1"/><path d="M9 16h1"/><path d="M14 8h1"/><path d="M14 12h1"/><path d="M14 16h1"/></svg>사무실<br><small>Office</small></button>
 </div>
 <div class="assign-maid-btns" id="assignMaidBtns" style="display:none"></div>
 </div>
@@ -394,6 +398,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 <button class="status-btn" id="statusBtnInspection" onclick="selStatus('inspection')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><circle cx="10" cy="10" r="6"/><path d="M21 21l-5-5"/></svg><span class="sbLabel">인스펙션필요</span><br><small class="sbSub">Inspection</small></button>
 <button class="status-btn status-btn-admin" onclick="selStatus('vacant')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M4 12H1M23 12h-3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>공실완료<br><small>Vacant</small></button>
 </div>
+<div class="status-btns-row" style="grid-template-columns:1fr;margin-top:4px;"><button class="status-btn status-btn-admin" onclick="selStatus('office')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><path d="M3 21h18"/><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"/><path d="M9 8h1"/><path d="M9 12h1"/><path d="M9 16h1"/><path d="M14 8h1"/><path d="M14 12h1"/><path d="M14 16h1"/></svg>사무실<br><small>Office · 정비 제외</small></button></div>
 </div>
 <div class="modal-section" id="maidSec"><label>메이드 배정 (관리자)</label><div class="maid-picker" id="maidPicker"></div><div class="maid-selected-display" id="maidSelectedDisplay"></div><input type="hidden" id="maidInput"></div>
 <div class="modal-section" id="inspectorOverrideSection" style="display:none"><label>🔍 인스펙터 변경 / Change Inspector</label><select id="inspectorOverridePicker" style="width:100%;padding:8px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:14px;" onchange="this.dataset.changed='1'"></select></div>
