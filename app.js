@@ -1116,11 +1116,12 @@ function renderTodayInspectorBar(){
   bar.style.display=S.role==='admin'?'flex':'none';
   if(S.role!=='admin')return;
   bar.innerHTML='';
-  const inspectors=S.maids&&S.maids.length?S.maids:['Mat','Diana'];
+  const inspectors=Array.isArray(S.maids)?S.maids:[];
   const label=document.createElement('span');
   label.textContent='오늘의 인스펙터:';
   label.className='bar-label';
   bar.appendChild(label);
+  if(!inspectors.length){const em=document.createElement('span');em.className='bar-label';em.textContent='등록된 메이드가 없습니다';bar.appendChild(em);}
   inspectors.forEach(function(n){
     const btn=document.createElement('button');
     btn.textContent=n;
