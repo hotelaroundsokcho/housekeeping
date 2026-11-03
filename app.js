@@ -1916,52 +1916,58 @@ function closeInspectorModal(e){
 if(!e||e.target.id==='inspectorModal')$('inspectorModal').classList.remove('open');
 }
 async function refreshInspectorList(){
-const r=await api({action:'getInspectors'});
-const rm=await api({action:'getMaids'});
 const box=$('inspectorList');
 if(!box)return;
-const inspectors=r.ok?(r.inspectors||[]):[];
-const maids=rm.ok?(rm.maids||[]):[];
-const adminNames=await loadAdminNames(true);
-// 관리자 + 메이드 전체 (중복 없이)
-const allTargets=[
-...adminNames,
-...maids.filter(m=>!adminNames.map(a=>a.toLowerCase()).includes(m.toLowerCase()))
-];
-if(!allTargets.length){box.innerHTML='<div style="color:var(--text2);font-size:12px">대상 없음</div>';return;}
+const rs=await Promise.all([api({action:'getInspectors'}),api({action:'getMaids'}),loadAdminNames(true)]);
+const r=rs[0],rm=rs[1],adminNames=rs[2]||[];
+const lower=function(a){return String(a).toLowerCase();};
+const inspectors=(r&&r.ok)?(r.inspectors||[]):[];
+const maids=(rm&&rm.ok)?(rm.maids||[]):[];
+const adminLower=adminNames.map(lower);
+const insLower=inspectors.map(lower);
+const maidTargets=maids.filter(function(m){return !adminLower.includes(lower(m));});
+if(!adminNames.length&&!maidTargets.length){box.innerHTML='<div style="color:var(--text2);font-size:12px">대상 없음</div>';return;}
 box.innerHTML='';
-let maidSectionAdded=false;
-allTargets.forEach(function(name){
-const isAdmin=adminNames.map(a=>a.toLowerCase()).includes(name.toLowerCase());
-const isIns=inspectors.map(n=>n.toLowerCase()).includes(name.toLowerCase());
-if(!isAdmin&&!maidSectionAdded){
-maidSectionAdded=true;
-const maidHeader=document.createElement('div');
-maidHeader.style.cssText='font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;padding:10px 0 6px;margin-top:4px;border-top:1px solid var(--border);';
-maidHeader.textContent='메이드 / Maid';
-box.appendChild(maidHeader);
-}else if(isAdmin&&!box.querySelector('.inspector-admin-header')){
-const adminHeader=document.createElement('div');
-adminHeader.className='inspector-admin-header';
-adminHeader.style.cssText='font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;padding-bottom:6px;';
-adminHeader.textContent='관리자 / Admin';
-box.insertBefore(adminHeader,box.firstChild);
+function addHeader(text,withTop){
+const h=document.createElement('div');
+h.style.cssText='font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;padding:'+(withTop?'10px 0 6px;margin-top:4px;border-top:1px solid var(--border);':'0 0 6px;');
+h.textContent=text;
+box.appendChild(h);
 }
+function addRow(name,isAdmin){
 const row=document.createElement('div');
 row.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);';
 row.innerHTML='<span style="font-size:14px">'+(isAdmin?'👔':'👤')+' '+esc(name)+'</span>';
+if(isAdmin){
+const badge=document.createElement('span');
+badge.style.cssText='padding:6px 10px;border-radius:8px;font-size:12px;font-weight:600;background:var(--surface2);color:var(--text2);';
+badge.textContent='상시 가능 / Always';
+row.appendChild(badge);
+}else{
 const tog=document.createElement('button');
-tog.style.cssText='padding:6px 14px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:600;transition:all 0.2s;background:'+(isIns?'var(--vacant)':'var(--surface2)')+';color:'+(isIns?'#fff':'var(--text2)');
-tog.textContent=isIns?'ON ✓':'OFF';
+let on=insLower.includes(lower(name));
+let busy=false;
+const paint=function(){
+tog.style.cssText='padding:6px 14px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:600;transition:all 0.2s;background:'+(on?'var(--vacant)':'var(--surface2)')+';color:'+(on?'#fff':'var(--text2)');
+tog.textContent=on?'ON ✓':'OFF';
+};
+paint();
 tog.onclick=async function(){
-showLoad('저장 중...');
-await api({action:'setInspector',maidName:name,active:!isIns});
-hideLoad();
-await refreshInspectorList();
+if(busy)return;
+busy=true;
+const next=!on;
+on=next;paint();tog.style.opacity='0.6';
+const res=await api({action:'setInspector',maidName:name,active:next});
+if(!res||!res.ok){on=!next;paint();toast('저장 실패 / Save failed: '+((res&&res.error)||'no response'));}
+tog.style.opacity='1';
+busy=false;
 };
 row.appendChild(tog);
+}
 box.appendChild(row);
-});
+}
+if(adminNames.length){addHeader('관리자 / Admin',false);adminNames.forEach(function(n){addRow(n,true);});}
+if(maidTargets.length){addHeader('메이드 / Maid',adminNames.length>0);maidTargets.forEach(function(n){addRow(n,false);});}
 }
 
 (function(){
