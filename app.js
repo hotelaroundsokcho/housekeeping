@@ -4,7 +4,7 @@ let S = {
 role:null, name:'', rooms:[], filter:'all',
 room:null, status:null,
 isInspector:false, batchMode:false, batchSelected:new Set(), batchAction:'status',
-todayInspector:'',
+todayInspector:'',adminNames:[],
   crossInspection:false,
   maidFilter:'',
 maidPasswordSet:false,
@@ -119,6 +119,15 @@ const j=JSON.parse(await r.text());if(j&&j.code==='AUTH_REQUIRED')AUTH.denied();
 }catch(e){return{ok:false,error:String(e)};}
 }
 
+async function loadAdminNames(force){
+if(!force&&S.adminNames&&S.adminNames.length)return S.adminNames;
+try{
+const r=await api({action:'getAdmins'});
+if(r&&r.ok&&Array.isArray(r.admins)){S.adminNames=r.admins.map(String);}
+}catch(e){}
+return S.adminNames||[];
+}
+
 async function sha256(str){
 const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str));
 return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
@@ -128,7 +137,8 @@ function renderUserCards(admins,maids){
 const wrap=$('userGrid');
 if(!wrap)return;
 wrap.innerHTML='';
-const adminList=(admins&&admins.length)?admins:['장경순','박지연'];
+if(Array.isArray(admins))S.adminNames=admins.map(String);
+const adminList=S.adminNames||[];
 const adminLower=adminList.map(a=>a.toLowerCase());
 const maidList=(maids||[]).filter(m=>!adminLower.includes(String(m).toLowerCase()));
 const entries=[];
@@ -1179,7 +1189,9 @@ if(inspSec&&inspPicker&&S.role==='admin'){
   if(S.room.status==='inspection'){
     inspSec.style.display='block';
     inspPicker.dataset.changed='0';
-    const allNames=[...S.maids,...['장경순','박지연']];
+    const _adm=await loadAdminNames(false);
+    const _mlow=S.maids.map(m=>String(m).toLowerCase());
+    const allNames=[...S.maids,..._adm.filter(a=>!_mlow.includes(String(a).toLowerCase()))];
     inspPicker.innerHTML='<option value="">선택하세요 / Select</option>'+allNames.map(n=>'<option value="'+n+'"'+(S.room.inspectorName===n?' selected':'')+'>'+n+'</option>').join('');
   }else{inspSec.style.display='none';}
 }else if(inspSec){inspSec.style.display='none';}
@@ -1575,6 +1587,7 @@ async function refreshAdminList(){
   const box=$('adminMgmtList');
   if(!r.ok){box.innerHTML='<div style="color:var(--uncleaned)">로드 실패</div>';return;}
   const admins=r.admins||[];
+  S.adminNames=admins.map(String);
   if(!admins.length){box.innerHTML='<div style="color:var(--text2);font-size:12px">등록된 관리자 없음</div>';return;}
   box.innerHTML='';
   admins.forEach(function(name){
@@ -1909,7 +1922,7 @@ const box=$('inspectorList');
 if(!box)return;
 const inspectors=r.ok?(r.inspectors||[]):[];
 const maids=rm.ok?(rm.maids||[]):[];
-const adminNames=['장경순','박지연'];
+const adminNames=await loadAdminNames(true);
 // 관리자 + 메이드 전체 (중복 없이)
 const allTargets=[
 ...adminNames,
