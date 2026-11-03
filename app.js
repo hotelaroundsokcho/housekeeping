@@ -55,9 +55,9 @@ function applyMaidLang(){
 
 /* ── 메이드 화면 문구 (ko/en/mn) · 러시아어 제외 ── */
 const MSTR={
-  ko:{today:'오늘 현황',next:'다음 객실',start:'정비 시작',finish:'정비 완료',inspect:'점검하기',detail:'자세히 · 메모',queue:'대기 중',done:'공실완료',empty:'배정된 객실이 없습니다',emptySub:'객실이 배정되면 여기에 표시됩니다',allDone:'모든 객실이 완료되었습니다',left:'남은 객실 {n}개',foot:'객실을 누르면 상세와 메모를 볼 수 있습니다',floor:'{n}층',double:'더블',twin:'트윈',ocean:'오션뷰',city:'시티뷰',sfx:'님'},
-  en:{today:'Today',next:'Next room',start:'Start cleaning',finish:'Finished cleaning',inspect:'Inspect',detail:'Details & notes',queue:'Up next',done:'Vacant',empty:'No rooms assigned',emptySub:'Rooms will appear here once assigned',allDone:'All rooms are done',left:'{n} rooms left',foot:'Tap a room for details and notes',floor:'Floor {n}',double:'Double',twin:'Twin',ocean:'Ocean view',city:'City view',sfx:''},
-  mn:{today:'Өнөөдөр',next:'Дараагийн өрөө',start:'Цэвэрлэгээг эхлэх',finish:'Цэвэрлэж дууслаа',inspect:'Шалгах',detail:'Дэлгэрэнгүй · тэмдэглэл',queue:'Дараагийн өрөөнүүд',done:'Дууссан',empty:'Танд өрөө оноогдоогүй байна',emptySub:'Өрөө оноогдсоны дараа энд харагдана',allDone:'Бүх өрөө дууслаа',left:'{n} өрөө үлдсэн',foot:'Дэлгэрэнгүй, тэмдэглэл харахын тулд өрөөг дарна уу',floor:'{n}-р давхар',double:'Давхар ор',twin:'Хоёр ор',ocean:'Далайн үзэмжтэй',city:'Хотын үзэмжтэй',sfx:''}
+  ko:{today:'오늘 현황',next:'다음 객실',start:'정비 시작',finish:'정비 완료',inspect:'점검하기',detail:'자세히 · 메모',queue:'대기 중',done:'공실완료',empty:'배정된 객실이 없습니다',emptySub:'객실이 배정되면 여기에 표시됩니다',allDone:'모든 객실이 완료되었습니다',left:'남은 객실 {n}개',foot:'객실을 누르면 상세와 메모를 볼 수 있습니다',floor:'{n}층',double:'더블',twin:'트윈',ocean:'오션뷰',city:'시티뷰',sfx:'님',unassigned:'미배정 객실',unassignedSub:'관리자가 배정하면 알림이 옵니다',viewOnly:'배정되지 않은 객실은 볼 수만 있습니다',nAssigned:'객실 {n}개가 배정되었습니다',nUncleaned:'정비할 객실 {n}개',roomAssigned:'{n}호 배정됨',roomUncleaned:'{n}호 정비 필요'},
+  en:{today:'Today',next:'Next room',start:'Start cleaning',finish:'Finished cleaning',inspect:'Inspect',detail:'Details & notes',queue:'Up next',done:'Vacant',empty:'No rooms assigned',emptySub:'Rooms will appear here once assigned',allDone:'All rooms are done',left:'{n} rooms left',foot:'Tap a room for details and notes',floor:'Floor {n}',double:'Double',twin:'Twin',ocean:'Ocean view',city:'City view',sfx:'',unassigned:'Unassigned rooms',unassignedSub:'You will be notified when an admin assigns one',viewOnly:'Unassigned rooms are view only',nAssigned:'{n} rooms assigned to you',nUncleaned:'{n} rooms to clean',roomAssigned:'Room {n} assigned',roomUncleaned:'Room {n} needs cleaning'},
+  mn:{today:'Өнөөдөр',next:'Дараагийн өрөө',start:'Цэвэрлэгээг эхлэх',finish:'Цэвэрлэж дууслаа',inspect:'Шалгах',detail:'Дэлгэрэнгүй · тэмдэглэл',queue:'Дараагийн өрөөнүүд',done:'Дууссан',empty:'Танд өрөө оноогдоогүй байна',emptySub:'Өрөө оноогдсоны дараа энд харагдана',allDone:'Бүх өрөө дууслаа',left:'{n} өрөө үлдсэн',foot:'Дэлгэрэнгүй, тэмдэглэл харахын тулд өрөөг дарна уу',floor:'{n}-р давхар',double:'Давхар ор',twin:'Хоёр ор',ocean:'Далайн үзэмжтэй',city:'Хотын үзэмжтэй',sfx:'',unassigned:'Хуваарилаагүй өрөөнүүд',unassignedSub:'Админ хуваарилвал мэдэгдэл ирнэ',viewOnly:'Хуваарилаагүй өрөөг зөвхөн харах боломжтой',nAssigned:'{n} өрөө танд хуваарилагдлаа',nUncleaned:'Цэвэрлэх {n} өрөө',roomAssigned:'{n} өрөө хуваарилагдлаа',roomUncleaned:'{n} өрөө цэвэрлэх шаардлагатай'}
 };
 const STL={
   ko:{uncleaned:'미정비',cleaning:'정비중',inspection:'인스펙션필요',vacant:'공실완료'},
@@ -126,6 +126,45 @@ const r=await api({action:'getAdmins'});
 if(r&&r.ok&&Array.isArray(r.admins)){S.adminNames=r.admins.map(String);}
 }catch(e){}
 return S.adminNames||[];
+}
+
+function isUnassignedPending(x){
+  return !!x&&!(x.maidName&&String(x.maidName).trim())&&(x.status==='uncleaned');
+}
+function maidOwns(x){
+  return !!(x&&x.maidName&&String(x.maidName).split(',').map(function(n){return n.trim().toLowerCase();}).includes(String(S.name||'').toLowerCase()));
+}
+let _prevMaidMap=null;
+function detectMaidAlerts(newRooms){
+  if(S.role!=='maid')return;
+  const cur={};
+  newRooms.forEach(function(r){cur[String(r.roomNo)]={mine:maidOwns(r),st:(r.status==='cleaned'?'inspection':r.status)};});
+  if(_prevMaidMap===null){_prevMaidMap=cur;return;}
+  const assigned=[];const uncleaned=[];
+  Object.keys(cur).forEach(function(no){
+    const c=cur[no],p=_prevMaidMap[no];
+    if(!p||!c.mine)return;
+    if(!p.mine){assigned.push(no);}
+    else if(c.st==='uncleaned'&&p.st!=='uncleaned'){uncleaned.push(no);}
+  });
+  _prevMaidMap=cur;
+  if(!assigned.length&&!uncleaned.length)return;
+  try{playStatusAlert();}catch(e){}
+  const title=assigned.length?(assigned.length===1?ms('roomAssigned',assigned[0]):ms('nAssigned',assigned.length)):(uncleaned.length===1?ms('roomUncleaned',uncleaned[0]):ms('nUncleaned',uncleaned.length));
+  const sub=(assigned.length&&uncleaned.length)?ms('nUncleaned',uncleaned.length):'';
+  showMaidNoticePopup(title,sub);
+}
+function showMaidNoticePopup(title,sub){
+  const pop=document.createElement('div');
+  pop.className='room-change-popup';
+  pop.setAttribute('role','status');
+  pop.style.cssText='position:fixed;bottom:80px;right:16px;left:16px;margin:0 auto;max-width:320px;z-index:9999;background:#10242E;border:1px solid #6FD3A6;border-left:4px solid #6FD3A6;border-radius:12px;padding:14px 16px;box-shadow:0 4px 24px rgba(0,0,0,.55);animation:rcpSlideIn .28s cubic-bezier(.16,1,.3,1);cursor:pointer;display:flex;flex-direction:column;gap:4px;';
+  pop.innerHTML='<span style="font-size:16px;font-weight:700;color:#fff;">'+esc(title)+'</span>'+(sub?'<span style="font-size:13px;color:#A9C2C8;">'+esc(sub)+'</span>':'');
+  let tid;
+  const remove=function(){clearTimeout(tid);if(pop.parentNode)pop.parentNode.removeChild(pop);};
+  pop.onclick=remove;
+  document.body.appendChild(pop);
+  tid=setTimeout(remove,6000);
 }
 
 async function sha256(str){
@@ -219,7 +258,7 @@ clearInterval(timer);_syncStop();
 sessionStorage.removeItem('hk_role');
 sessionStorage.removeItem('hk_name');
 sessionStorage.removeItem('hk_maid_pwset');
-S={role:null,name:'',rooms:[],filter:'all',room:null,status:null,batchMode:false,batchSelected:new Set(),batchAction:'status',maidPasswordSet:false,pendingLoginUser:null};_prevRoomMap=null;_popupQueue=[];_popupRunning=false;
+S={role:null,name:'',rooms:[],filter:'all',room:null,status:null,batchMode:false,batchSelected:new Set(),batchAction:'status',maidPasswordSet:false,pendingLoginUser:null};_prevRoomMap=null;_prevMaidMap=null;_popupQueue=[];_popupRunning=false;
 $('loginScreen').style.display='flex';$('app').style.display='none';
 const pwEl=$('loginPwInput');if(pwEl)pwEl.value='';
 $('loginPwGroup').style.display='none';
@@ -385,7 +424,7 @@ async function _syncOnce(force){
     var sig=JSON.stringify(r.rooms)+'|'+JSON.stringify(S.stays||{})+'|'+(S.stayToday||'');
     if(force||sig!==_syncSig){
       _syncSig=sig;
-      detectRoomChanges(r.rooms);S.rooms=r.rooms;
+      detectRoomChanges(r.rooms);detectMaidAlerts(r.rooms);S.rooms=r.rooms;
       render();stats();maidStats();
       if(S.role==='admin'){renderTodayInspectorBar();renderCheckoutBoard();}
     }
@@ -987,11 +1026,12 @@ function render(){
     rooms=rooms.filter(x=>x.status!=='occupied'&&x.status!=='broken'&&x.status!=='office');
     const isMine=x=>x.maidName&&x.maidName.split(',').map(n=>n.trim().toLowerCase()).includes(S.name.toLowerCase());
     const isMyInspection=x=>x.status==='inspection'&&(x.inspectorName===S.name||!x.inspectorName);
+    const _unassigned=rooms.filter(isUnassignedPending).sort((a,b)=>String(a.roomNo).localeCompare(String(b.roomNo),'ko',{numeric:true}));
     rooms=S.isInspector?rooms.filter(x=>isMine(x)||isMyInspection(x)):rooms.filter(isMine);
     const grid=$('roomsGrid');
     grid.innerHTML='';
 
-    if(rooms.length===0){
+    if(rooms.length===0&&_unassigned.length===0){
       grid.innerHTML='<div class="empty-state">'+esc(ms('empty'))+'<small>'+esc(ms('emptySub'))+'</small></div>';
       return;
     }
@@ -1050,6 +1090,21 @@ function render(){
       }
     }else{
       const ac=document.createElement('div');ac.className='hk-allclear';ac.textContent='✓ '+ms('allDone');grid.appendChild(ac);
+    }
+
+    if(_unassigned.length>0){
+      const uh=document.createElement('div');uh.className='hk-section';uh.textContent=ms('unassigned')+' · '+_unassigned.length;grid.appendChild(uh);
+      const us=document.createElement('div');us.className='hk-foot';us.style.textAlign='left';us.textContent=ms('unassignedSub');grid.appendChild(us);
+      const ul=document.createElement('div');ul.className='hk-list';
+      _unassigned.forEach(function(r){
+        const b=document.createElement('button');
+        b.type='button';b.className='hk-row';b.dataset.room=String(r.roomNo);
+        b.innerHTML='<span class="hk-row-no">'+esc(String(r.roomNo))+'</span><span class="hk-row-sub">'+esc(roomSub(r,true))+'</span><span class="hk-row-st uncleaned">'+(STATUS_ICON.uncleaned||'')+esc(stL('uncleaned'))+'</span>';
+        const no=String(r.roomNo);
+        b.onclick=function(){openRoom(no);};
+        ul.appendChild(b);
+      });
+      grid.appendChild(ul);
     }
 
     if(done.length>0){
@@ -1176,6 +1231,18 @@ const ts=fmtCardTime(S.room.updatedAt);
 modalTime.textContent=ts?'마지막 변경: '+ts:'';
 }
 updBtns();
+S.roomReadOnly=(S.role==='maid'&&!maidOwns(S.room)&&!(S.isInspector&&S.room.status==='inspection'&&(!S.room.inspectorName||S.room.inspectorName===S.name)));
+(function(){
+  const sv=$('modalSaveBtn');
+  if(sv)sv.style.display=S.roomReadOnly?'none':'';
+  document.querySelectorAll('#mPaneStatus .status-btn').forEach(function(b){b.style.visibility=S.roomReadOnly?'hidden':'';});
+  let note=$('roomReadOnlyNote');
+  if(!note){
+    const host=$('mPaneStatus');
+    if(host){note=document.createElement('div');note.id='roomReadOnlyNote';note.style.cssText='font-size:13px;color:var(--text2);padding:6px 2px;';host.insertBefore(note,host.firstChild);}
+  }
+  if(note){note.textContent=S.roomReadOnly?ms('viewOnly'):'';note.style.display=S.roomReadOnly?'':'none';}
+})();
 document.querySelectorAll('.status-btn-admin').forEach(b=>{
 const _isSelfInspect=S.role==='maid'&&S.room&&S.room.maidName&&S.room.maidName.split(',').map(n=>n.trim().toLowerCase()).includes(S.name.toLowerCase())&&S.room.status==='inspection';
 const _btnStatus=(b.getAttribute('onclick')||'').replace(/^selStatus\('/,'').replace(/'\)$/,'');
@@ -1269,6 +1336,7 @@ async function quickAdvance(no){
   no=String(no);
   var room=S.rooms.find(function(r){return String(r.roomNo)===no;});
   if(!room)return;
+  if(S.role==='maid'&&!maidOwns(room)&&!(S.isInspector&&room.status==='inspection'&&(!room.inspectorName||room.inspectorName===S.name))){toast(ms('viewOnly'));return;}
   var st=room.status==='cleaned'?'inspection':room.status;
   var next=st==='uncleaned'?'cleaning':(st==='cleaning'?'inspection':null);
   if(!next){openRoom(no);return;}
@@ -1304,6 +1372,7 @@ if(btns[map[S.status]])btns[map[S.status]].classList.add('sel-'+S.status);
 
 async function saveRoom(){
 if(!S.room)return;
+if(S.role==='maid'&&S.roomReadOnly){toast(ms('viewOnly'));return;}
 const prevStatus=S.room.status;
 showLoad('저장 중...');
 try{
