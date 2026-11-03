@@ -1662,7 +1662,10 @@ function detectRoomChanges(newRooms){
     }
     _prevRoomMap[no]=newSt;
   });
-  if(changed.length) changed.forEach(c=>_popupQueue.push(c));
+  if(changed.length){
+    try{playStatusAlert();}catch(e){}
+    changed.forEach(c=>_popupQueue.push(c));
+  }
   if(changed.length && !_popupRunning) drainPopupQueue();
 }
 
