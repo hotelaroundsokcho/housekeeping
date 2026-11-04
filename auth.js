@@ -8,7 +8,7 @@
 
   var KEY = 'hk_auth';
   var A = window.AUTH = {
-    st: { token: '', exp: 0, id: '', name: '', role: '', isOwner: false },
+    st: { token: '', exp: 0, id: '', name: '', role: '', isOwner: false, rank: '', canApprove: false },
     pending: 0,
     tab: 'login'
   };
@@ -43,7 +43,7 @@
     setTimeout(function () { denying = false; A.msg('세션이 만료되었습니다. 다시 로그인하세요 / Session expired', 'err'); }, 0);
   };
   A.clear = function () {
-    A.st = { token: '', exp: 0, id: '', name: '', role: '', isOwner: false };
+    A.st = { token: '', exp: 0, id: '', name: '', role: '', isOwner: false, rank: '', canApprove: false };
     A.pending = 0;
     lsDel();
     if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
@@ -187,7 +187,7 @@
 
   /* ── 로그인 성공 처리: 기존 submitLogin 과 동일한 상태 세팅 ── */
   A.apply = function (r, token, expMs) {
-    A.st = { token: token, exp: expMs, id: r.id || '', name: r.name, role: r.role, isOwner: !!r.isOwner };
+    A.st = { token: token, exp: expMs, id: r.id || '', name: r.name, role: r.role, isOwner: !!r.isOwner, rank: r.rank || '', canApprove: !!(r.canApprove || r.isOwner) };
     lsSet({ token: token, exp: expMs });
     S.role = r.role; S.name = r.name;
     S.isInspector = !!r.isInspector; S.maidPasswordSet = true; S.lang = r.lang || '';
@@ -228,7 +228,7 @@
     fab.style.display = 'flex';
     A.renderFab();
     if (pollTimer) clearInterval(pollTimer);
-    if (A.st.isOwner) {
+    if (A.st.canApprove) {
       pollTimer = setInterval(async function () {
         if (!A.st.token) return;
         var r = await api({ action: 'me' });
@@ -243,7 +243,7 @@
   A.renderFab = function () {
     var fab = document.getElementById('authFab'); if (!fab) return;
     fab.textContent = '👤';
-    if (A.st.isOwner && A.pending > 0) fab.appendChild(h('span', { class: 'bd', text: String(A.pending) }));
+    if (A.st.canApprove && A.pending > 0) fab.appendChild(h('span', { class: 'bd', text: String(A.pending) }));
   };
 
   A.openPanel = function () {
@@ -253,10 +253,16 @@
       document.body.appendChild(pn);
     }
     pn.classList.add('open');
-    A.renderPanel(A.st.isOwner ? 'pending' : 'me');
+    A.renderPanel(A.st.canApprove ? 'pending' : 'me');
   };
 
-  function roleLabel(role) { return role === 'owner' ? '보스 / Owner' : role === 'admin' ? '관리자 / Admin' : role === 'maid' ? '메이드 / Maid' : '-'; }
+  function roleLabel(role) { return { owner: '보스 / Owner', head: '점장 / General Manager', vice: '부점장 / Deputy Manager', manager: '매니저 / Manager', admin: '관리자(구) / Admin', maid: '메이드 / Maid' }[role] || '-'; }
+  /* 직급 선택지: 점장 지정은 보스만 (서버도 동일하게 강제) */
+  function rankOptions() {
+    var o = [['maid', '메이드 / Maid'], ['manager', '매니저 / Manager'], ['vice', '부점장 / Deputy Manager']];
+    if (A.st.isOwner) o.push(['head', '점장 / General Manager']);
+    return o.map(function (x) { return h('option', { value: x[0], text: x[1] }); });
+  }
   function statusLabel(s) { return { pending: '승인 대기', active: '사용 중', rejected: '거절됨', disabled: '중지됨' }[s] || s; }
 
   A.renderPanel = async function (tab) {
@@ -265,9 +271,9 @@
     var sheet = h('div', { class: 'auth-sheet' });
     pn.appendChild(sheet);
     sheet.appendChild(h('h3', { text: A.st.name || '계정' }));
-    sheet.appendChild(h('div', { class: 'auth-sub', text: roleLabel(A.st.isOwner ? 'owner' : A.st.role) + (A.st.id ? '  ·  ' + A.st.id : '') }));
+    sheet.appendChild(h('div', { class: 'auth-sub', text: roleLabel(A.st.isOwner ? 'owner' : (A.st.rank || A.st.role)) + (A.st.id ? '  ·  ' + A.st.id : '') }));
 
-    if (A.st.isOwner) {
+    if (A.st.canApprove) {
       var tabs = h('div', { class: 'auth-tabs' }, [
         h('button', { type: 'button', class: 'auth-tab' + (tab === 'pending' ? ' on' : ''), text: '승인 대기' + (A.pending ? ' (' + A.pending + ')' : ''), onclick: function () { A.renderPanel('pending'); } }),
         h('button', { type: 'button', class: 'auth-tab' + (tab === 'all' ? ' on' : ''), text: '전체 계정', onclick: function () { A.renderPanel('all'); } }),
@@ -330,18 +336,18 @@
       var done = function (r2, okMsg) { if (r2 && r2.ok) A.renderPanel(tab); else alert((r2 && r2.error) || '실패'); };
 
       if (a.status === 'pending' || a.status === 'rejected') {
-        var sel = h('select', {}, [h('option', { value: 'maid', text: '메이드 / Maid' }), h('option', { value: 'admin', text: '관리자 / Admin' })]);
+        var sel = h('select', {}, rankOptions());
         var mk = h('input', { type: 'text', placeholder: '메이드 표시명', value: a.name.toLowerCase().replace(/\s+/g, ''), maxlength: '20', style: 'width:130px' });
         sel.addEventListener('change', function () { mk.style.display = sel.value === 'maid' ? '' : 'none'; });
         ctl.appendChild(sel); ctl.appendChild(mk);
         ctl.appendChild(h('button', { type: 'button', class: 'auth-btn pri', text: '승인', onclick: async function () {
-          if (!confirm(a.name + ' (' + a.id + ') 님을 ' + (sel.value === 'maid' ? '메이드' : '관리자') + '로 승인합니까?\n본인 확인이 끝난 신청만 승인하세요.')) return;
+          if (!confirm(a.name + ' (' + a.id + ') 님을 ' + sel.options[sel.selectedIndex].text + ' 직급으로 승인합니까?\n본인 확인이 끝난 신청만 승인하세요.')) return;
           done(await api({ action: 'approveAccount', id: a.id, role: sel.value, maidName: mk.value }));
         } }));
         if (a.status === 'pending') ctl.appendChild(h('button', { type: 'button', class: 'auth-btn dng', text: '거절', onclick: async function () {
           if (confirm(a.name + ' 신청을 거절합니까?')) done(await api({ action: 'rejectAccount', id: a.id }));
         } }));
-      } else if (a.role !== 'owner') {
+      } else if (a.role !== 'owner' && !(a.role === 'head' && !A.st.isOwner)) {
         if (a.status === 'active') ctl.appendChild(h('button', { type: 'button', class: 'auth-btn dng', text: '사용 중지', onclick: async function () {
           if (confirm(a.name + ' 계정을 중지합니까? 모든 기기에서 즉시 로그아웃됩니다.')) done(await api({ action: 'setAccountStatus', id: a.id, status: 'disabled' }));
         } }));
@@ -355,9 +361,13 @@
             if (t.length < 8 || t.toLowerCase().indexOf(a.id) !== -1) return alert('8자 이상이며 아이디를 포함하지 않아야 합니다');
             done(await api({ action: 'resetAccountPassword', id: a.id, newPassword: await A.pre(a.id, t) }));
           } }));
-          var other = a.role === 'maid' ? 'admin' : 'maid';
-          ctl.appendChild(h('button', { type: 'button', class: 'auth-btn', text: other === 'admin' ? '관리자로 변경' : '메이드로 변경', onclick: async function () {
-            if (confirm(a.name + ' 의 역할을 ' + (other === 'admin' ? '관리자' : '메이드') + '로 변경합니까?')) done(await api({ action: 'setAccountRole', id: a.id, role: other }));
+          var rsel = h('select', {}, rankOptions());
+          rsel.value = a.role;
+          if (rsel.value !== a.role) rsel.selectedIndex = 0;
+          ctl.appendChild(rsel);
+          ctl.appendChild(h('button', { type: 'button', class: 'auth-btn', text: '직급 변경', onclick: async function () {
+            if (rsel.value === a.role) return alert('현재 직급과 같습니다');
+            if (confirm(a.name + ' 의 직급을 ' + rsel.options[rsel.selectedIndex].text + '(으)로 변경합니까?\n다른 기기는 로그아웃됩니다.')) done(await api({ action: 'setAccountRole', id: a.id, role: rsel.value }));
           } }));
         }
       }
