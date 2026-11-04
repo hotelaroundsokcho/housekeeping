@@ -308,17 +308,51 @@ S.stayToday=r.today||'';
 }catch(e){}
 }
 
+/* 퇴실일 변경 미저장 감지: 날짜·시각이 저장값과 다르거나 사유가 입력돼 있으면 true */
+function stayDirty(){
+  try{
+    if(!S.room||S.role!=='admin')return false;
+    const rm=$('roomModal');
+    if(!rm||!rm.classList.contains('open'))return false;
+    const sec=$('stayDateSection');
+    if(!sec||sec.style.display==='none')return false;
+    const st=((S.stays||{})[String(S.room.roomNo)])||{};
+    const d=($('stayDateInput')&&$('stayDateInput').value)||'';
+    const tm=($('stayTimeInput')&&$('stayTimeInput').value)||'';
+    const reason=(($('stayReasonInput')&&$('stayReasonInput').value)||'').trim();
+    return d!==(st.checkoutDate||'')||tm!==(st.checkoutTime||'')||reason!=='';
+  }catch(e){return false;}
+}
+/* 저장·닫기 직전 호출: true 면 원래 동작 진행, false 면 모달에 머문다 */
+async function guardStayUnsaved(){
+  if(!stayDirty())return true;
+  const doSave=confirm('퇴실일 변경이 저장되지 않았습니다.\n\n[확인] 지금 저장\n[취소] 저장하지 않고 계속');
+  if(!doSave)return true;
+  const ok=await saveStayDate();
+  return ok===true;
+}
+
 async function saveStayDate(){
-if(!S.room||S.role!=='admin')return;
-const d=$('stayDateInput').value;
-if(!d){toast('날짜를 선택하세요');return;}
-showLoad('저장 중...');
-const r=await api({action:'setStay',roomNo:S.room.roomNo,checkoutDate:d,updaterName:S.name,updaterRole:S.role});
-hideLoad();
-if(r&&r.ok){
-toast('✅ 퇴실예정일 '+d+' 저장');
-await loadStays();render();renderCheckoutBoard();
-}else{toast('저장 실패: '+((r&&r.error)||'알 수 없는 오류'));}
+  if(!S.room||S.role!=='admin')return false;
+  const d=$('stayDateInput').value;
+  const tm=($('stayTimeInput')&&$('stayTimeInput').value)||'';
+  const reason=(($('stayReasonInput')&&$('stayReasonInput').value)||'').trim();
+  if(!d){toast('날짜를 선택하세요');return false;}
+  if(!reason){toast('변경 사유를 입력하세요');return false;}
+  if(tm&&tm>'18:00'){toast('18:00 이후는 지정할 수 없습니다. 퇴실일을 다음 날로 설정하세요');return false;}
+  showLoad('저장 중...');
+  let r=null;
+  try{r=await api({action:'setStay',roomNo:S.room.roomNo,checkoutDate:d,checkoutTime:tm,reason:reason,updaterName:S.name,updaterRole:S.role});}catch(e){r=null;}
+  hideLoad();
+  if(r&&r.ok){
+    toast((r.restored?'✅ 재실로 복귀 · ':'✅ ')+'퇴실예정 '+d+(tm?' '+tm:'')+' 저장');
+    await loadStays();
+    try{if($('stayReasonInput'))$('stayReasonInput').value='';}catch(e){}
+    render();renderCheckoutBoard();
+    return true;
+  }
+  toast('저장 실패: '+((r&&r.error)||'알 수 없는 오류'));
+  return false;
 }
 
 async function renderCheckoutBoard(){
@@ -339,12 +373,13 @@ box.innerHTML=
 '<div class="cb-line">기준일 '+esc(r.today)+'</div>'+
 '<div class="cb-cells">'+
 '<div class="cb-cell"><b>'+r.occupied+'</b><span>재실</span></div>'+
-'<div class="cb-cell hot"><b>'+r.due.length+'</b><span>11:10 전환 예정</span></div>'+
+'<div class="cb-cell hot"><b>'+r.due.length+'</b><span>자동 전환 예정</span></div>'+
 '<div class="cb-cell"><b>'+r.staying.length+'</b><span>연박 유지</span></div>'+
 '<div class="cb-cell'+(r.unknown.length?' warn':'')+'"><b>'+r.unknown.length+'</b><span>기록없음</span></div></div>'+
 '<div class="cb-line">알림: 1차 '+(hm(r.alert1SentAt)||'미발송')+' / 2차 '+(hm(r.alert2SentAt)||'미발송')+'<br>'+
 '전환 예정: <b>'+names(r.due)+'</b></div>'+
 (r.unknown.length?'<div class="cb-warn">기록없음(직접 확인 필요): '+names(r.unknown)+'</div>':'')+
+      (r.held&&r.held.length?'<div class="cb-warn">접수 보류(연장 객실에서 체크아웃 접수됨, 확인 필요): '+names(r.held.map(function(n){return {roomNo:n};}))+'</div>':'')+
 '</details>';
 }
 async function renderCheckinSync(){
@@ -976,7 +1011,8 @@ function overdueRoomNos(){
     const no=String(r.roomNo);
     const s=S.stays[no];
     if(!s||!s.checkoutDate)return;
-    if(s.checkoutDate<S.stayToday||(s.checkoutDate===S.stayToday&&m>=OVERDUE_FROM_MIN))out.push(no);
+    const _lim=(s.checkoutTime&&/^\d{2}:\d{2}$/.test(s.checkoutTime))?(Number(s.checkoutTime.slice(0,2))*60+Number(s.checkoutTime.slice(3,5))):OVERDUE_FROM_MIN;
+    if(s.checkoutDate<S.stayToday||(s.checkoutDate===S.stayToday&&m>=_lim))out.push(no);
   });
   return out.sort(function(a,b){return a.localeCompare(b,'ko',{numeric:true});});
 }
@@ -1264,9 +1300,11 @@ if(inspSec&&inspPicker&&S.role==='admin'){
 }else if(inspSec){inspSec.style.display='none';}
 const staySec=$('stayDateSection');
 if(staySec){
-  if(S.role==='admin'&&S.room.status==='occupied'){
+  if(S.role==='admin'&&(S.room.status==='occupied'||(S.room.status==='uncleaned'&&((S.stays||{})[no]||{}).statusSource==='timeout'))){
     const _st=(S.stays||{})[no];
     $('stayDateInput').value=(_st&&_st.checkoutDate)||'';
+    if($('stayTimeInput'))$('stayTimeInput').value=(_st&&_st.checkoutTime)||'';
+    if($('stayReasonInput'))$('stayReasonInput').value='';
     $('stayDateInput').min=S.stayToday||'';
     $('stayDateHint').textContent=(_st&&_st.checkoutDate)?'기본값은 입실 다음 날입니다. 연박이면 퇴실 날짜로 바꿔 주세요.':'퇴실예정일 기록이 없습니다. 날짜를 지정하면 자동 전환 대상에 포함됩니다.';
     staySec.style.display='block';
@@ -1322,8 +1360,11 @@ picker.appendChild(clr);}
 renderButtons();
 display.textContent=currentMaid?'배정: '+currentMaid:'배정 없음';
 }
-function closeModal(e){if(e.target.id==='roomModal'){$('roomModal').classList.remove('open');S.room=null;}}
-function closeRoomModal(){$('roomModal').classList.remove('open');S.room=null;}
+function closeModal(e){if(e.target.id==='roomModal'){closeRoomModal();}}
+async function closeRoomModal(){
+  if(stayDirty()){if(!(await guardStayUnsaved()))return;}
+  $('roomModal').classList.remove('open');S.room=null;
+}
 function markOpenCard(){
   var open=$('roomModal')&&$('roomModal').classList.contains('open')&&S.room;
   document.querySelectorAll('.room-card.is-open').forEach(function(c){c.classList.remove('is-open');});
@@ -1371,10 +1412,14 @@ if(btns[map[S.status]])btns[map[S.status]].classList.add('sel-'+S.status);
 }
 
 async function saveRoom(){
+if(stayDirty()){if(!(await guardStayUnsaved()))return;}
+return _saveRoomCore();
+}
+async function _saveRoomCore(){
 if(!S.room)return;
 if(S.role==='maid'&&S.roomReadOnly){toast(ms('viewOnly'));return;}
 const prevStatus=S.room.status;
-showLoad('저장 중...');
+const _stSaved=S.status;
 try{
 const calls=[];
 if(S.status&&S.status!==prevStatus)
@@ -1391,19 +1436,32 @@ const newInsp=document.getElementById('inspectorOverridePicker');
 if(newInsp&&S.room&&S.room.status==='inspection'&&newInsp.dataset.changed==='1'){
   calls.push(api({action:'assignInspector',roomNo:S.room.roomNo,inspectorName:newInsp.value}));
 }
-await Promise.all(calls);
-if(S.status==='cleaning'){
+const _roomSaved=S.room;
+const _maidSaved=(S.role==='admin')?$('maidInput').value.trim():null;
+try{
+  const _ro=S.rooms.find(function(x){return String(x.roomNo)===String(_roomSaved.roomNo);});
+  if(_ro){
+    if(_stSaved&&_stSaved!==prevStatus)_ro.status=_stSaved;
+    if(_maidSaved!==null)_ro.maidName=_maidSaved;
+    render();stats();maidStats();
+  }
+}catch(_e){}
+$('roomModal').classList.remove('open');
+toast('저장 중...');
+const _res=await Promise.all(calls);
+const _bad=_res.find(function(x){return x&&x.ok===false;});
+if(_bad){toast('저장실패: '+(_bad.error||''));await loadRooms(true);return;}
+if(_stSaved==='cleaning'){
 const _nm=$('maidInput').value.trim();
 const _cm=S.room.maidName||'';
 if(!_nm&&!_cm)setTimeout(function(){toast('⚠️ '+S.room.roomNo+'호 메이드 미배정 상태로 정비중 전환되었습니다');},400);
 }
 const _canInspect=S.role==='admin'||(S.role==='maid'&&(S.isInspector||(S.room.maidName&&S.room.maidName.split(',').map(n=>n.trim().toLowerCase()).includes(S.name.toLowerCase()))));
-if(_canInspect&&prevStatus==='inspection'&&S.status==='vacant'){
+if(_canInspect&&prevStatus==='inspection'&&_stSaved==='vacant'){
 await api({action:'assignMaid',roomNo:S.room.roomNo,maidName:''});
 }
-await loadRooms(true);hideLoad();
-$('roomModal').classList.remove('open');toast('✅ 저장완료');
-}catch(e){hideLoad();toast('저장실패');}
+await loadRooms(true);toast('✅ 저장완료');
+}catch(e){hideLoad();toast('저장실패');try{await loadRooms(true);}catch(_e2){}}
 }
 
 
