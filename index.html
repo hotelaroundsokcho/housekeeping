@@ -635,7 +635,7 @@ html[lang="mn"] .hk-row-sub{flex:1 1 0;}
 <div class="status-btns-row"><button class="status-btn status-btn-admin" data-s="office" onclick="selStatus('office')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><path d="M3 21h18"/><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"/><path d="M9 8h1"/><path d="M9 12h1"/><path d="M9 16h1"/><path d="M14 8h1"/><path d="M14 12h1"/><path d="M14 16h1"/></svg>사무실<br><small>Office · 정비 제외</small></button></div>
 </div>
 <div class="modal-section" id="maidSec"><label>메이드 배정 (관리자)</label><div class="maid-picker" id="maidPicker"></div><div class="maid-selected-display" id="maidSelectedDisplay"></div><input type="hidden" id="maidInput"></div>
-<div class="modal-section" id="stayDateSection" style="display:none"><label>퇴실 예정일 / Check-out date</label><div style="display:flex;gap:8px"><input type="date" id="stayDateInput" style="flex:1;padding:8px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:14px;"><button type="button" onclick="saveStayDate()" style="padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">변경</button></div><div id="stayDateHint" style="font-size:11px;color:var(--text2);margin-top:6px"></div></div>
+<div class="modal-section" id="stayDateSection" style="display:none"><label>퇴실 예정일 / Check-out date</label><div style="display:flex;gap:8px"><input type="date" id="stayDateInput" style="flex:1;padding:8px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:14px;"></div><div style="display:flex;gap:8px;margin-top:8px"><input type="time" id="stayTimeInput" max="18:00" aria-label="퇴실 시각(선택, 18:00까지)" style="width:120px;padding:8px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:14px;"><input type="text" id="stayReasonInput" maxlength="60" placeholder="사유(필수) 예: 늦은 퇴실 요청" aria-label="변경 사유" style="flex:1;padding:8px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:14px;"></div><button type="button" id="stayDateSaveBtn" onclick="saveStayDate()" style="width:100%;margin-top:8px;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:13px;font-weight:700;cursor:pointer">퇴실일 변경 저장 / Save check-out date</button><div id="stayDateHint" style="font-size:11px;color:var(--text2);margin-top:6px"></div><div id="stayDateNote" style="font-size:11px;color:var(--text2);margin-top:4px">날짜·사유를 입력한 뒤 위 버튼을 눌러야 반영됩니다. 아래 [저장 / Save]는 상태·메모·메이드만 저장합니다.</div></div>
 <div class="modal-section" id="inspectorOverrideSection" style="display:none"><label>인스펙터 변경 / Change Inspector</label><select id="inspectorOverridePicker" style="width:100%;padding:8px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:14px;" onchange="this.dataset.changed='1'"></select></div>
 </div>
 <div class="modal-tab-pane" id="mPaneNote">
@@ -750,7 +750,7 @@ html[lang="mn"] .hk-row-sub{flex:1 1 0;}
 </div>
 <div class="loading-overlay" id="loadingOv" style="display:none"><div class="loading-box"><div class="spinner"></div><p id="loadingMsg">처리 중...</p></div></div>
 <div class="toast" id="toast"></div>
-<script src="auth.js?v=v22"></script>
-<script src="app.js?v=v22"></script>
+<script src="auth.js?v=v23"></script>
+<script src="app.js?v=v23"></script>
 </body>
 </html>
