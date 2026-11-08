@@ -135,6 +135,8 @@ input,select,textarea{font-family:inherit;color:var(--text);}
 /* ── 도구줄 ── */
 .toolbar{display:flex;gap:8px;margin-bottom:12px;}
 .toolbar>button{flex:1;}
+.toolbar>a.link-btn{flex:1;display:inline-flex;align-items:center;justify-content:center;text-align:center;line-height:1.25;white-space:nowrap;text-decoration:none;box-sizing:border-box;}
+.toolbar>a.link-btn:focus-visible{outline:2px solid var(--tide);outline-offset:2px;}
 .select-mode-btn,.maid-mgmt-btn,.change-pin-btn,.reset-btn,.report-btn{min-height:46px;padding:0 12px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;background:var(--surface);color:var(--ink);border:1.5px solid var(--border);}
 .select-mode-btn:hover,.maid-mgmt-btn:hover,.change-pin-btn:hover{border-color:var(--tide);}
 .select-mode-btn.on{background:var(--ink);color:#fff;border-color:var(--ink);}
@@ -567,6 +569,7 @@ html[lang="mn"] .hk-row-sub{flex:1 1 0;}
 <div class="toolbar">
 <button class="select-mode-btn" id="batchModeBtn" style="display:none" onclick="toggleBatchMode()">일괄 작업</button>
 <button class="maid-mgmt-btn" id="settingsBtn" style="display:none" onclick="openSettingsModal()">설정 / Settings</button>
+<a class="maid-mgmt-btn link-btn" id="rsvConsoleLink" href="https://hotelaroundsokcho.github.io/ops-desk-7k3/" target="rsv-console" rel="noopener noreferrer" aria-label="예약 인입 콘솔 열기 (새 탭)">예약 콘솔 ↗</a>
 </div>
 <div class="rooms-grid" id="roomsGrid"></div>
 <div class="maid-stats-section" id="maidStatsSection" style="display:none">
@@ -750,7 +753,7 @@ html[lang="mn"] .hk-row-sub{flex:1 1 0;}
 </div>
 <div class="loading-overlay" id="loadingOv" style="display:none"><div class="loading-box"><div class="spinner"></div><p id="loadingMsg">처리 중...</p></div></div>
 <div class="toast" id="toast"></div>
-<script src="auth.js?v=v23"></script>
-<script src="app.js?v=v23"></script>
+<script src="auth.js?v=v24"></script>
+<script src="app.js?v=v24"></script>
 </body>
 </html>
