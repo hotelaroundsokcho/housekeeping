@@ -292,7 +292,7 @@ const _preP=S.role==='admin'?_loadAdminPre():null;
 const _roomsP=loadRooms();
 if(_preP){const _ok=await _preP;if(!_ok)setTimeout(function(){if(S.role==='admin')_loadAdminPre();},5000);}
 await _roomsP;
-if(S.role==='admin')renderCheckinSync();
+if(S.role==='admin'){renderCheckinSync();renderAutoHealth();}
 hideLoad();
 _syncStart();
 }
@@ -381,6 +381,25 @@ box.innerHTML=
 (r.unknown.length?'<div class="cb-warn">기록없음(직접 확인 필요): '+names(r.unknown)+'</div>':'')+
       (r.held&&r.held.length?'<div class="cb-warn">접수 보류(연장 객실에서 체크아웃 접수됨, 확인 필요): '+names(r.held.map(function(n){return {roomNo:n};}))+'</div>':'')+
 '</details>';
+}
+async function renderAutoHealth(){
+  const box=$('autoHealthBar');
+  if(!box)return;
+  if(S.role!=='admin'){box.style.display='none';return;}
+  const r=await api({action:'getAutomationHealth'});
+  if(!r||r.ok!==true||!Array.isArray(r.items)){box.style.display='none';return;}
+  box.style.display='block';
+  const wasOpen=!!(box.querySelector('details')&&box.querySelector('details').open);
+  const bad=r.items.filter(function(i){return !i.ok;});
+  const hhmm=r.at?String(r.at).slice(11,16):'';
+  let html='<details class="cb-details"'+(wasOpen?' open':'')+'><summary><b class="cb-title">자동화 점검</b>';
+  html+='<span class="cb-sum">'+(bad.length?'<b class="warn">점검 필요 '+bad.length+'건</b>':'이상 없음')+(r.errorsToday?' · 오늘 오류 <b class="warn">'+r.errorsToday+'</b>':'')+'</span>';
+  html+='<span class="cb-flag '+(bad.length?'off':'on')+'">'+(bad.length?'⚠ 확인':'정상 '+hhmm)+'</span></summary>';
+  html+='<div class="cb-line">'+r.items.map(function(i){return (i.ok?'✔ ':'⚠ ')+esc(i.name)+(i.msg?' · '+esc(i.msg):'');}).join('<br>')+'</div>';
+  const rec=Array.isArray(r.recent)?r.recent:[];
+  if(rec.length)html+='<div class="cb-line">최근 기록<br>'+rec.slice().reverse().map(function(x){return esc(String(x.at).slice(11,16))+' '+esc(x.job)+' · '+esc(x.summary);}).join('<br>')+'</div>';
+  html+='</details>';
+  box.innerHTML=html;
 }
 async function renderCheckinSync(){
   const box=$('checkinSyncBoard');
@@ -482,7 +501,7 @@ function _syncSchedule(){
   var d=_syncFails>0?Math.min(SYNC_MS*Math.pow(2,_syncFails),SYNC_MAX_BACKOFF_MS):SYNC_MS;
   _syncTimer=setTimeout(async function(){
     if(!S.role)return;
-    if(!document.hidden){await syncNow(false);if(++_verTick%6===0){_verCheck();if(S.role==='admin')renderCheckinSync();}}
+    if(!document.hidden){await syncNow(false);if(++_verTick%6===0){_verCheck();if(S.role==='admin'){renderCheckinSync();renderAutoHealth();}}}
     _syncSchedule();
   },d);
 }
@@ -592,6 +611,7 @@ const _st=r.status==='cleaned'?'inspection':r.status;
 if(tally[name][_st]!==undefined)tally[name][_st]++;
 });
 });
+try{renderTodayMaidBar(tally);}catch(e){}
 const names=Object.keys(tally);
 if(!names.length){box.innerHTML='<div style="color:var(--text2);font-size:12px;padding:8px">배정된 메이드 없음</div>';return;}
 const openNames=new Set(Array.from(box.querySelectorAll('.maid-stat-card.open')).map(c=>c.dataset.maid));
@@ -950,6 +970,7 @@ el.classList.toggle('active-filter', S.filter===filters[i] && !S.maidFilter);
 }
 
 function updateMaidStatHighlight(name){
+try{renderTodayMaidBar();}catch(e){}
 document.querySelectorAll('.maid-stat-card').forEach(c=>{
 c.classList.toggle('active-maid', !!name && c.dataset.maid===name);
 });
@@ -1465,6 +1486,58 @@ await loadRooms(true);toast('✅ 저장완료');
 }
 
 
+function renderTodayMaidBar(tally){
+  const bar=$('todayMaidBar');
+  if(!bar)return;
+  bar.style.display=S.role==='admin'?'flex':'none';
+  if(S.role!=='admin')return;
+  if(!tally){
+    tally={};
+    (S.rooms||[]).forEach(function(r){
+      if(!r.maidName)return;
+      r.maidName.split(',').map(function(n){return n.trim();}).filter(Boolean).forEach(function(n){tally[n]=(tally[n]||0)+1;});
+    });
+  }else{
+    const t2={};Object.keys(tally).forEach(function(n){t2[n]=tally[n].total;});tally=t2;
+  }
+  bar.innerHTML='';
+  const label=document.createElement('span');
+  label.textContent='오늘의 메이드:';
+  label.className='bar-label';
+  bar.appendChild(label);
+  const names=Object.keys(tally);
+  if(!names.length){
+    const em=document.createElement('span');em.className='bar-label';em.textContent='오늘 배정된 메이드가 없습니다';bar.appendChild(em);
+    return;
+  }
+  names.forEach(function(name){
+    const btn=document.createElement('button');
+    btn.type='button';
+    btn.className='chip maid-chip'+(S.maidFilter&&S.maidFilter.toLowerCase()===name.toLowerCase()?' on':'');
+    btn.dataset.name=name;
+    const mc=(typeof getMaidColorIdx==='function')?getMaidColorIdx(name):-1;
+    const dot=document.createElement('span');dot.className='maid-dot';
+    if(mc>=0)dot.style.background=MAID_COLORS[mc];else dot.style.background='var(--text2)';
+    const nm=document.createElement('span');nm.textContent=name;
+    const cnt=document.createElement('span');cnt.className='mc-n';cnt.textContent=tally[name]+'실';
+    btn.appendChild(dot);btn.appendChild(nm);btn.appendChild(cnt);
+    btn.title=name+' 배정 객실 '+tally[name]+'실 보기';
+    btn.addEventListener('click',function(){
+      const n=this.dataset.name;
+      if(S.maidFilter&&S.maidFilter.toLowerCase()===n.toLowerCase()){S.maidFilter='';updateMaidStatHighlight('');updateStatCardHighlight();}
+      else{S.maidFilter=n;updateMaidStatHighlight(n);document.querySelectorAll('.stat-card').forEach(function(c){c.classList.remove('active-filter');});}
+      render();
+      if(S.maidFilter){const g=$('roomsGrid');if(g&&g.scrollIntoView)g.scrollIntoView({behavior:'smooth',block:'start'});}
+    });
+    bar.appendChild(btn);
+  });
+  if(S.maidFilter){
+    const clr=document.createElement('button');clr.type='button';clr.className='chip danger';clr.textContent='전체 보기';
+    clr.addEventListener('click',function(){S.maidFilter='';updateMaidStatHighlight('');updateStatCardHighlight();render();});
+    bar.appendChild(clr);
+  }
+}
+const INSPECTOR_EXCLUDE=['장경순'];
 function renderTodayInspectorBar(){
   const bar=$('todayInspectorBar');
   if(!bar)return;
@@ -1472,19 +1545,27 @@ function renderTodayInspectorBar(){
   if(S.role!=='admin')return;
   bar.innerHTML='';
   const inspectors=Array.isArray(S.maids)?S.maids:[];
+  const _lc=function(x){return String(x||'').trim().toLowerCase();};
+  const _maidSet=new Set(inspectors.map(_lc));
+  const staff=(Array.isArray(S.adminNames)?S.adminNames:[]).filter(function(n){return n&&!_maidSet.has(_lc(n))&&INSPECTOR_EXCLUDE.indexOf(_lc(n))<0;});
+  if(!S._adminLoadTried){S._adminLoadTried=true;loadAdminNames().then(function(){try{renderTodayInspectorBar();}catch(e){}});}
   const label=document.createElement('span');
   label.textContent='오늘의 인스펙터:';
   label.className='bar-label';
   bar.appendChild(label);
-  if(!inspectors.length&&S.maids!==undefined&&!S._maidsFailed){const em=document.createElement('span');em.className='bar-label';em.textContent='등록된 메이드가 없습니다';bar.appendChild(em);}
-  inspectors.forEach(function(n){
+  if(!inspectors.length&&!staff.length&&S.maids!==undefined&&!S._maidsFailed){const em=document.createElement('span');em.className='bar-label';em.textContent='등록된 메이드가 없습니다';bar.appendChild(em);}
+  const _mkChip=function(n,isStaff){
     const btn=document.createElement('button');
-    btn.textContent=n;
+    btn.type='button';
+    btn.textContent=isStaff?n+' (관리자)':n;
     btn.dataset.name=n;
-    btn.className='chip'+(S.todayInspector===n?' on':'');
+    btn.className='chip'+(_lc(S.todayInspector)===_lc(n)?' on':'');
     btn.addEventListener('click',function(){setTodayInspectorUI(this.dataset.name);});
     bar.appendChild(btn);
-  });
+  };
+  inspectors.forEach(function(n){_mkChip(n,false);});
+  if(staff.length&&inspectors.length){const s2=document.createElement('span');s2.className='bar-sep';bar.appendChild(s2);}
+  staff.forEach(function(n){_mkChip(n,true);});
   const clearBtn=document.createElement('button');
   clearBtn.textContent='해제';
   clearBtn.className='chip danger';
@@ -1516,8 +1597,10 @@ catch(e){hideLoad();toast('실패');}
 async function openMaidMgmtModal(){$('maidMgmtList').innerHTML='<div style="color:var(--text2);font-size:12px">로딩중...</div>';$('maidMgmtModal').classList.add('open');await refreshMaidList();}
 async function refreshMaidList(){const r=await api({action:'getMaids'});const box=$('maidMgmtList');if(!r.ok){box.innerHTML='<div style="color:var(--uncleaned)">로드 실패</div>';return;}const maids=r.maids||[];if(!maids.length){box.innerHTML='<div style="color:var(--text2);font-size:12px">등록된 메이드 없음</div>';return;}let pwStatus={};try{const sr=await api({action:'getMaidPasswordStatus'});if(sr.ok)pwStatus=sr.status||{};}catch(e){}box.innerHTML='';maids.forEach(function(name){const row=document.createElement('div');row.className='maid-row';const hasPw=!!pwStatus[name];const lockHtml=hasPw?'<span style="color:var(--vacant);font-size:11px;margin-left:6px;font-weight:600">🔒 설정됨</span>':'<span style="color:var(--text2);font-size:11px;margin-left:6px">🔓 미설정</span>';row.innerHTML='<span class="maid-row-name">👤 '+esc(name[0].toUpperCase()+name.slice(1))+lockHtml+'</span>';const btnWrap=document.createElement('div');btnWrap.style.cssText='display:flex;gap:6px;';if(hasPw){const rb=document.createElement('button');rb.className='maid-del-btn';rb.style.cssText='background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.4);color:var(--cleaning);';rb.textContent='비밀번호 초기화';rb.onclick=function(){resetMaidPw(name);};btnWrap.appendChild(rb);}const btn=document.createElement('button');btn.className='maid-del-btn';btn.textContent='삭제';btn.onclick=function(){removeMaid(name);};btnWrap.appendChild(btn);row.appendChild(btnWrap);box.appendChild(row);});}
 async function resetMaidPw(name){if(!confirm(name+' 님의 비밀번호를 초기화하시겠습니까?\n초기화 후 이름만으로 다시 입장할 수 있습니다.'))return;showLoad('초기화 중...');const r=await api({action:'resetMaidPassword',name});hideLoad();if(r.ok){toast('✅ '+name+' 비밀번호 초기화 완료');await refreshMaidList();}else toast('초기화 실패: '+(r.error||''));}
-async function addMaid(){const inp=$('newMaidInput');const name=inp.value.trim();if(!name)return;showLoad('추가 중...');const r=await api({action:'addMaid',name});hideLoad();if(r.ok){inp.value='';toast('✅ '+name+' 추가완료');await refreshMaidList();}else toast('추가 실패: '+(r.error||''));}
-async function removeMaid(name){if(!confirm(name+' 님을 명단에서 삭제하시겠습니까?\n배정된 객실 및 인스펙터 지정도 자동으로 정리됩니다.'))return;showLoad('삭제 중...');const r=await api({action:'removeMaid',name});if(!r.ok){hideLoad();toast('삭제 실패: '+(r.error||''));return;}try{const rr=await api({action:'getRooms'});const rooms=rr.rooms||rr||[];const nameLc=name.toLowerCase();const maidTargets=rooms.filter(function(x){return x.maidName&&x.maidName.split(',').map(function(n){return n.trim().toLowerCase();}).includes(nameLc);});const inspTargets=rooms.filter(function(x){return x.inspectorName&&x.inspectorName.trim().toLowerCase()===nameLc;});for(const rm of maidTargets){const remain=rm.maidName.split(',').map(function(n){return n.trim();}).filter(function(n){return n&&n.toLowerCase()!==nameLc;}).join(', ');await api({action:'assignMaid',roomNo:rm.roomNo,maidName:remain});}for(const rm of inspTargets){await api({action:'assignInspector',roomNo:rm.roomNo,inspectorName:''});}try{const tr=await api({action:'getTodayInspector'});if(tr.ok&&tr.inspector&&tr.inspector.toLowerCase()===nameLc){await api({action:'setTodayInspector',inspector:''});S.todayInspector='';if(typeof renderTodayInspectorBar==='function')renderTodayInspectorBar();}}catch(e){}if(maidTargets.length||inspTargets.length){const rr2=await api({action:'getRooms'});S.rooms=rr2.rooms||rr2||[];render();}}catch(e){}hideLoad();toast('✅ '+name+' 삭제완료 (배정/인스펙터 정리 포함)');await refreshMaidList();}
+async function syncMaids(){try{const r=await api({action:'getMaids'});if(r&&r.ok&&Array.isArray(r.maids))S.maids=r.maids;}catch(e){}}
+window.syncMaids=syncMaids;
+async function addMaid(){const inp=$('newMaidInput');const name=inp.value.trim();if(!name)return;showLoad('추가 중...');const r=await api({action:'addMaid',name});hideLoad();if(r.ok){inp.value='';toast('✅ '+name+' 추가완료');await refreshMaidList();await syncMaids();}else toast('추가 실패: '+(r.error||''));}
+async function removeMaid(name){if(!confirm(name+' 님을 명단에서 삭제하시겠습니까?\n배정된 객실 및 인스펙터 지정도 자동으로 정리됩니다.'))return;showLoad('삭제 중...');const r=await api({action:'removeMaid',name});if(!r.ok){hideLoad();toast('삭제 실패: '+(r.error||''));return;}try{const rr=await api({action:'getRooms'});const rooms=rr.rooms||rr||[];const nameLc=name.toLowerCase();const maidTargets=rooms.filter(function(x){return x.maidName&&x.maidName.split(',').map(function(n){return n.trim().toLowerCase();}).includes(nameLc);});const inspTargets=rooms.filter(function(x){return x.inspectorName&&x.inspectorName.trim().toLowerCase()===nameLc;});for(const rm of maidTargets){const remain=rm.maidName.split(',').map(function(n){return n.trim();}).filter(function(n){return n&&n.toLowerCase()!==nameLc;}).join(', ');await api({action:'assignMaid',roomNo:rm.roomNo,maidName:remain});}for(const rm of inspTargets){await api({action:'assignInspector',roomNo:rm.roomNo,inspectorName:''});}try{const tr=await api({action:'getTodayInspector'});if(tr.ok&&tr.inspector&&tr.inspector.toLowerCase()===nameLc){await api({action:'setTodayInspector',inspector:''});S.todayInspector='';if(typeof renderTodayInspectorBar==='function')renderTodayInspectorBar();}}catch(e){}if(maidTargets.length||inspTargets.length){const rr2=await api({action:'getRooms'});S.rooms=rr2.rooms||rr2||[];render();}}catch(e){}hideLoad();toast('✅ '+name+' 삭제완료 (배정/인스펙터 정리 포함)');await refreshMaidList();await syncMaids();}
 async function toggleCrossInspection(){
   const newVal=!S.crossInspection;
   const r=await api({action:'setCrossInspection',enabled:newVal});

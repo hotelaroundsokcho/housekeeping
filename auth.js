@@ -325,6 +325,40 @@
     A.pending = list.filter(function (x) { return x.status === 'pending'; }).length;
     A.renderFab();
 
+
+    /* 계정 직접 추가 — 전체 계정 탭, 승인 권한자(점장·보스)만. 서버도 동일하게 강제한다 */
+    if (tab === 'all' && A.st.canApprove) {
+      var addWrap = h('div', { style: 'margin-bottom:12px' });
+      var addForm = h('div', { class: 'auth-row', style: 'display:none' });
+      var fId = h('input', { type: 'text', placeholder: '아이디 (영문 소문자·숫자·밑줄 4~20자)', maxlength: '20', autocomplete: 'off', style: 'width:100%;box-sizing:border-box;margin-bottom:6px' });
+      var fName = h('input', { type: 'text', placeholder: '본명 (2~30자)', maxlength: '30', autocomplete: 'off', style: 'width:100%;box-sizing:border-box;margin-bottom:6px' });
+      var fRole = h('select', { style: 'width:100%;box-sizing:border-box;margin-bottom:6px' }, rankOptions());
+      var fMaid = h('input', { type: 'text', placeholder: '메이드 표시명 (2~20자, 비우면 본명)', maxlength: '20', autocomplete: 'off', style: 'width:100%;box-sizing:border-box;margin-bottom:6px;display:none' });
+      var fPw = h('input', { type: 'password', placeholder: '임시 비밀번호 (8자 이상, 아이디 미포함)', autocomplete: 'new-password', style: 'width:100%;box-sizing:border-box;margin-bottom:6px' });
+      var fMsg = h('div', { class: 'auth-sub', text: '임시 비밀번호는 본인에게 직접 전달하고, 첫 로그인 후 변경하도록 안내하세요.' });
+      fRole.addEventListener('change', function () { fMaid.style.display = fRole.value === 'maid' ? '' : 'none'; });
+      var fBtn = h('button', { type: 'button', class: 'auth-btn pri', text: '계정 만들기' });
+      fBtn.addEventListener('click', async function () {
+        var id = fId.value.trim().toLowerCase(), nm = fName.value.trim(), pw = fPw.value;
+        if (!/^[a-z0-9_]{4,20}$/.test(id)) return alert('아이디는 영문 소문자·숫자·밑줄 4~20자입니다');
+        if (nm.length < 2) return alert('본명을 입력하세요');
+        if (pw.length < 8 || pw.toLowerCase().indexOf(id) !== -1) return alert('비밀번호는 8자 이상이며 아이디를 포함하지 않아야 합니다');
+        var rl = fRole.options[fRole.selectedIndex].text;
+        if (!confirm(nm + ' (' + id + ') 계정을 ' + rl + ' 직급으로 바로 만듭니다.\n본인 확인이 끝난 경우에만 진행하세요.')) return;
+        fBtn.disabled = true;
+        try {
+          var r3 = await api({ action: 'createAccount', id: id, name: nm, role: fRole.value, maidName: fMaid.value.trim(), password: await A.pre(id, pw) });
+          if (r3 && r3.ok) { try { if (window.syncMaids) window.syncMaids(); } catch (e2) { /* 무시 */ } A.renderPanel('all'); } else { fBtn.disabled = false; alert((r3 && r3.error) || '계정 생성 실패'); }
+        } catch (e) { fBtn.disabled = false; alert(String(e.message || e)); }
+      });
+      [fId, fName, fRole, fMaid, fPw, fBtn, fMsg].forEach(function (el) { addForm.appendChild(el); });
+      var addToggle = h('button', { type: 'button', class: 'auth-btn pri', text: '+ 계정 직접 추가' });
+      addToggle.addEventListener('click', function () { addForm.style.display = addForm.style.display === 'none' ? '' : 'none'; });
+      addWrap.appendChild(addToggle);
+      addWrap.appendChild(addForm);
+      holder.appendChild(addWrap);
+    }
+
     var rows = tab === 'pending' ? list.filter(function (x) { return x.status === 'pending'; }) : list;
     if (!rows.length) holder.appendChild(h('div', { class: 'auth-sub', text: tab === 'pending' ? '승인 대기 중인 신청이 없습니다.' : '계정이 없습니다.' }));
 
@@ -333,7 +367,7 @@
       row.appendChild(h('div', { class: 't', text: a.name + '  (' + a.id + ')' }));
       row.appendChild(h('div', { class: 's', text: statusLabel(a.status) + (a.role ? ' · ' + roleLabel(a.role) : '') + (a.createdAt ? ' · 신청 ' + a.createdAt.slice(0, 16).replace('T', ' ') : '') + (a.lastLogin ? ' · 최근 ' + a.lastLogin.slice(0, 16).replace('T', ' ') : '') }));
       var ctl = h('div', { class: 'ctl' });
-      var done = function (r2, okMsg) { if (r2 && r2.ok) A.renderPanel(tab); else alert((r2 && r2.error) || '실패'); };
+      var done = function (r2, okMsg) { if (r2 && r2.ok) { try { if (window.syncMaids) window.syncMaids(); if (typeof loadRooms === 'function') loadRooms(true); } catch (e) { /* 목록 갱신 실패는 무시 */ } A.renderPanel(tab); } else alert((r2 && r2.error) || '실패'); };
 
       if (a.status === 'pending' || a.status === 'rejected') {
         var sel = h('select', {}, rankOptions());
@@ -368,6 +402,32 @@
           ctl.appendChild(h('button', { type: 'button', class: 'auth-btn', text: '직급 변경', onclick: async function () {
             if (rsel.value === a.role) return alert('현재 직급과 같습니다');
             if (confirm(a.name + ' 의 직급을 ' + rsel.options[rsel.selectedIndex].text + '(으)로 변경합니까?\n다른 기기는 로그아웃됩니다.')) done(await api({ action: 'setAccountRole', id: a.id, role: rsel.value }));
+          } }));
+        }
+      }
+      /* 이름 수정 · 삭제 — owner 계정과 (보스가 아닐 때) 점장 계정은 제외. 서버도 동일하게 강제한다 */
+      if (a.role !== 'owner' && !(a.role === 'head' && !A.st.isOwner)) {
+        if (a.status === 'active' || a.status === 'disabled') {
+          ctl.appendChild(h('button', { type: 'button', class: 'auth-btn', text: '이름 수정', onclick: async function () {
+            var nn = prompt('본명 (2~30자)', a.name);
+            if (nn === null) return;
+            nn = nn.trim();
+            var mm = '';
+            if (a.role === 'maid') {
+              mm = prompt('메이드 표시명 (2~20자, 한글·영문 소문자·숫자)\n바꾸면 배정 객실·인스펙터·언어 설정도 함께 바뀝니다', a.maidKey || '');
+              if (mm === null) return;
+              mm = mm.trim();
+            }
+            if (nn === a.name && (a.role !== 'maid' || mm === (a.maidKey || ''))) return alert('변경된 내용이 없습니다');
+            if (confirm(a.name + ' 계정 정보를 수정합니까?\n해당 계정은 모든 기기에서 로그아웃됩니다.')) done(await api({ action: 'updateAccount', id: a.id, name: nn, maidName: mm }));
+          } }));
+        }
+        if (String(a.id).toLowerCase() !== String(A.st.id).toLowerCase()) {
+          ctl.appendChild(h('button', { type: 'button', class: 'auth-btn dng', text: '삭제', onclick: async function () {
+            var extra = a.role === 'maid' ? '\n배정된 객실과 인스펙터 지정도 함께 해제됩니다.' : '';
+            if (!confirm(a.name + ' (' + a.id + ') 계정을 삭제합니까?' + extra + '\n삭제하면 되돌릴 수 없고 모든 기기에서 로그아웃됩니다.')) return;
+            if (!confirm('정말 삭제합니다. 계속하시겠습니까?')) return;
+            done(await api({ action: 'deleteAccount', id: a.id }));
           } }));
         }
       }

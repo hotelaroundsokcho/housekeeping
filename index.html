@@ -168,6 +168,11 @@ input,select,textarea{font-family:inherit;color:var(--text);}
 .chip.on{background:var(--tide);border-color:var(--tide);color:#fff;}
 .chip.danger{color:var(--uncleaned-s);border-color:#E7B5AC;}
 .bar-sep{width:1px;height:22px;background:var(--border);margin:0 2px;}
+.maid-chip{display:inline-flex;align-items:center;gap:7px;}
+.maid-chip .maid-dot{width:9px;height:9px;border-radius:50%;flex:none;}
+.maid-chip .mc-n{font-size:12px;font-weight:700;color:var(--text2);}
+.maid-chip.on .mc-n{color:#fff;}
+.maid-chip.on{background:var(--ink);border-color:var(--ink);}
 
 /* ── 메이드별 현황 ── */
 .maid-stats-section{margin-bottom:12px;}
@@ -554,6 +559,8 @@ html[lang="mn"] .hk-row-sub{flex:1 1 0;}
 <div id="overdueBoard" class="panel ov-board" style="display:none"></div>
 <div id="checkoutBoard" class="panel" style="display:none"></div>
 <div id="checkinSyncBoard" class="panel" style="display:none"></div>
+<div id="autoHealthBar" class="panel" style="display:none"></div>
+<div id="todayMaidBar" class="panel today-bar" style="display:none"></div>
 <div id="todayInspectorBar" class="panel today-bar" style="display:none"></div>
 </div>
 </div>
@@ -753,7 +760,7 @@ html[lang="mn"] .hk-row-sub{flex:1 1 0;}
 </div>
 <div class="loading-overlay" id="loadingOv" style="display:none"><div class="loading-box"><div class="spinner"></div><p id="loadingMsg">처리 중...</p></div></div>
 <div class="toast" id="toast"></div>
-<script src="auth.js?v=v24"></script>
-<script src="app.js?v=v24"></script>
+<script src="auth.js?v=v28"></script>
+<script src="app.js?v=v28"></script>
 </body>
 </html>
