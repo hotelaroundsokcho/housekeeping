@@ -1,5 +1,5 @@
 /* ============================================================
- * auth.js — 로그인 · 가입 신청 · 보스 승인 UI (신규 파일)
+ * auth.js v32 — 로그인 · 가입 신청 · 승인 · 임시 비밀번호 강제 변경 · 활동 기록 UI
  * index.html 에서 app.js 보다 먼저 로드한다.
  * app.js 의 전역(S, go, logout, api, showLoad, hideLoad, $)을 호출 시점에 참조한다.
  * ============================================================ */
@@ -8,7 +8,7 @@
 
   var KEY = 'hk_auth';
   var A = window.AUTH = {
-    st: { token: '', exp: 0, id: '', name: '', role: '', isOwner: false, rank: '', canApprove: false },
+    st: { token: '', exp: 0, id: '', name: '', role: '', isOwner: false, rank: '', canApprove: false, mustChange: false },
     pending: 0,
     tab: 'login'
   };
@@ -29,6 +29,16 @@
   };
   A.pre = function (id, pw) { return A.sha('hk:' + String(id).toLowerCase() + ':' + pw); };
 
+  /* ── 출근 명단 연동 결과 안내 (서버 응답의 att). 연동 미설정(ATT_BOOK_ID_NOT_SET)이면 아무것도 보이지 않는다 ── */
+  function attNotice(att) {
+    if (!att || att.ok !== false || att.code === 'ATT_BOOK_ID_NOT_SET') return;
+    var msg;
+    if (att.code === 'ATT_NAME_EXISTS') msg = '출근 명단에 같은 이름의 메이드가 이미 있어 새로 만들지 않았습니다.\n같은 사람이면 목록의 \'기존 출근 명단과 연결\' 을 누르세요.\n(계정 처리는 완료되었습니다)';
+    else if (att.code === 'ATT_UNAVAILABLE') msg = '출근 시스템에 연결하지 못했습니다. 계정 처리는 완료되었습니다.\n잠시 후 목록의 \'출근 명단 연동\' 을 눌러 다시 시도하세요.';
+    else msg = '출근 명단 연동에 실패했습니다 (' + (att.code || '알 수 없음') + '). 계정 처리는 완료되었습니다.\n목록의 \'출근 명단 연동\' 으로 다시 시도하세요.';
+    alert(msg);
+  }
+
   /* ── api() 연동 (app.js 의 api 에서 호출) ── */
   A.decorate = function (p) {
     var q = Object.assign({}, p);
@@ -43,8 +53,9 @@
     setTimeout(function () { denying = false; A.msg('세션이 만료되었습니다. 다시 로그인하세요 / Session expired', 'err'); }, 0);
   };
   A.clear = function () {
-    A.st = { token: '', exp: 0, id: '', name: '', role: '', isOwner: false, rank: '', canApprove: false };
+    A.st = { token: '', exp: 0, id: '', name: '', role: '', isOwner: false, rank: '', canApprove: false, mustChange: false };
     A.pending = 0;
+    var fc = document.getElementById('authForce'); if (fc) fc.parentNode.removeChild(fc);
     lsDel();
     if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
   };
@@ -99,7 +110,13 @@
       '.auth-btn{padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;cursor:pointer}' +
       '.auth-btn.pri{background:var(--accent);border-color:var(--accent);color:#0f1117;font-weight:600}' +
       '.auth-btn.dng{color:#ef4444}' +
-      '.auth-sec{margin:14px 0 6px;font-size:12px;color:var(--text2)}';
+      '.auth-sec{margin:14px 0 6px;font-size:12px;color:var(--text2)}' +
+      '#authForce{position:fixed;inset:0;z-index:1100;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:16px;overflow:auto}' +
+      '.auth-force-box{width:100%;max-width:420px}' +
+      '.auth-force-box h3{margin:0 0 6px;font-size:17px;color:var(--text)}' +
+      '.auth-force-box input{background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:14px}' +
+      '.auth-btn:focus-visible,.auth-tab:focus-visible,#authFab:focus-visible,.auth-force-box input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}' +
+      '.auth-audit{font-size:11.5px;line-height:1.5;color:var(--text2);border-bottom:1px solid var(--border);padding:6px 0;word-break:break-all}';
     document.head.appendChild(h('style', { id: 'authCss', text: css }));
   }
 
@@ -187,8 +204,13 @@
 
   /* ── 로그인 성공 처리: 기존 submitLogin 과 동일한 상태 세팅 ── */
   A.apply = function (r, token, expMs) {
-    A.st = { token: token, exp: expMs, id: r.id || '', name: r.name, role: r.role, isOwner: !!r.isOwner, rank: r.rank || '', canApprove: !!(r.canApprove || r.isOwner) };
+    A.st = { token: token, exp: expMs, id: r.id || '', name: r.name, role: r.role, isOwner: !!r.isOwner, rank: r.rank || '', canApprove: !!(r.canApprove || r.isOwner), mustChange: !!r.mustChange };
     lsSet({ token: token, exp: expMs });
+    /* 임시 비밀번호로 로그인한 계정: 비밀번호를 바꾸기 전에는 앱에 들어가지 못한다 (서버도 me·changePassword·logout 외 모두 차단) */
+    if (A.st.mustChange) { A.forceChange(r); return; }
+    A.enter(r);
+  };
+  A.enter = function (r) {
     S.role = r.role; S.name = r.name;
     S.isInspector = !!r.isInspector; S.maidPasswordSet = true; S.lang = r.lang || '';
     ssSet('hk_role', r.role); ssSet('hk_name', r.name);
@@ -197,6 +219,51 @@
     A.pending = r.pendingCount || 0;
     go();
     A.mount();
+  };
+
+  /* ── 임시 비밀번호 강제 변경 화면 ── */
+  A.forceChange = function (r) {
+    injectCss();
+    var old = document.getElementById('authForce'); if (old) old.parentNode.removeChild(old);
+    var ov = h('div', { id: 'authForce', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'authForceT' });
+    var box = h('div', { class: 'auth-force-box' });
+    var cur = h('input', { type: 'password', autocomplete: 'current-password', placeholder: '임시 비밀번호 / Temporary password' });
+    var n1 = h('input', { type: 'password', autocomplete: 'new-password', placeholder: '새 비밀번호 (8자 이상) / New password' });
+    var n2 = h('input', { type: 'password', autocomplete: 'new-password', placeholder: '새 비밀번호 확인 / Confirm' });
+    var msg = h('div', { class: 'auth-msg', id: 'authForceMsg' });
+    var set = function (t, k) { msg.className = 'auth-msg ' + (k || ''); msg.textContent = t || ''; };
+    var go2 = h('button', { type: 'button', class: 'auth-btn pri', text: '비밀번호 변경 / Change password' });
+    var submit = async function () {
+      if (!cur.value) return set('임시 비밀번호를 입력하세요 / Enter the temporary password', 'err');
+      if (n1.value.length < 8) return set('새 비밀번호는 8자 이상이어야 합니다 / 8+ characters', 'err');
+      if (n1.value.toLowerCase().indexOf(String(A.st.id).toLowerCase()) !== -1) return set('비밀번호에 아이디를 포함할 수 없습니다 / Must not contain the ID', 'err');
+      if (n1.value === cur.value) return set('임시 비밀번호와 다른 비밀번호를 입력하세요 / Must differ from the temporary password', 'err');
+      if (n1.value !== n2.value) return set('새 비밀번호 확인이 일치하지 않습니다 / Passwords do not match', 'err');
+      go2.disabled = true;
+      busy(true, '변경 중...');
+      try {
+        var rr = await api({ action: 'changePassword', oldPassword: await A.pre(A.st.id, cur.value), newPassword: await A.pre(A.st.id, n1.value) });
+        busy(false);
+        if (rr && rr.ok) {
+          cur.value = n1.value = n2.value = '';
+          A.st.mustChange = false;
+          if (ov.parentNode) ov.parentNode.removeChild(ov);
+          A.enter(r);
+        } else { go2.disabled = false; set((rr && rr.error) || '변경 실패 / Failed', 'err'); }
+      } catch (e) { busy(false); go2.disabled = false; set(String(e.message || e), 'err'); }
+    };
+    go2.addEventListener('click', submit);
+    [cur, n1, n2].forEach(function (el) { el.style.cssText = 'display:block;width:100%;margin-bottom:8px;box-sizing:border-box'; el.addEventListener('keydown', function (e) { if (e.key === 'Enter') submit(); }); });
+    box.appendChild(h('h3', { id: 'authForceT', text: '비밀번호를 먼저 변경하세요 / Set your own password' }));
+    box.appendChild(h('div', { class: 'auth-sub', text: '임시 비밀번호로 로그인했습니다. 본인만 아는 비밀번호로 바꾼 뒤 이용할 수 있습니다. / You signed in with a temporary password. Choose your own to continue.' }));
+    [cur, n1, n2].forEach(function (el) { box.appendChild(el); });
+    box.appendChild(go2);
+    box.appendChild(msg);
+    box.appendChild(h('div', { style: 'height:10px' }));
+    box.appendChild(h('button', { type: 'button', class: 'auth-btn', text: '로그아웃 / Sign out', onclick: function () { A.onLogout(); } }));
+    ov.appendChild(box);
+    document.body.appendChild(ov);
+    setTimeout(function () { try { cur.focus(); } catch (e) {} }, 0);
   };
 
   /* ── 앱 시작 시: 저장된 토큰 검증 후 복귀 ── */
@@ -257,10 +324,10 @@
   };
 
   function roleLabel(role) { return { owner: '보스 / Owner', head: '점장 / General Manager', vice: '부점장 / Deputy Manager', manager: '매니저 / Manager', admin: '관리자(구) / Admin', maid: '메이드 / Maid' }[role] || '-'; }
-  /* 직급 선택지: 점장 지정은 보스만 (서버도 동일하게 강제) */
+  /* 직급 선택지: 메이드 외 직급(매니저·부점장·점장) 지정은 보스만 (서버도 동일하게 강제). 부점장·점장은 메이드만 */
   function rankOptions() {
-    var o = [['maid', '메이드 / Maid'], ['manager', '매니저 / Manager'], ['vice', '부점장 / Deputy Manager']];
-    if (A.st.isOwner) o.push(['head', '점장 / General Manager']);
+    var o = [['maid', '메이드 / Maid']];
+    if (A.st.isOwner) o.push(['manager', '매니저 / Manager'], ['vice', '부점장 / Deputy Manager'], ['head', '점장 / General Manager']);
     return o.map(function (x) { return h('option', { value: x[0], text: x[1] }); });
   }
   function statusLabel(s) { return { pending: '승인 대기', active: '사용 중', rejected: '거절됨', disabled: '중지됨' }[s] || s; }
@@ -279,11 +346,13 @@
         h('button', { type: 'button', class: 'auth-tab' + (tab === 'all' ? ' on' : ''), text: '전체 계정', onclick: function () { A.renderPanel('all'); } }),
         h('button', { type: 'button', class: 'auth-tab' + (tab === 'me' ? ' on' : ''), text: '내 계정', onclick: function () { A.renderPanel('me'); } })
       ]);
+      if (A.st.isOwner) tabs.insertBefore(h('button', { type: 'button', class: 'auth-tab' + (tab === 'audit' ? ' on' : ''), text: '활동 기록', onclick: function () { A.renderPanel('audit'); } }), tabs.lastChild);
       sheet.appendChild(tabs);
     }
 
     if (tab === 'me') A.renderMe(sheet);
-    else await A.renderAccounts(sheet, tab);
+    else if (tab === 'audit' && A.st.isOwner) await A.renderAudit(sheet);
+    else await A.renderAccounts(sheet, tab === 'audit' ? 'pending' : tab);
 
     sheet.appendChild(h('div', { style: 'height:10px' }));
     sheet.appendChild(h('button', { type: 'button', class: 'auth-btn', text: '닫기 / Close', onclick: function () { pn.classList.remove('open'); } }));
@@ -315,6 +384,24 @@
     sheet.appendChild(h('button', { type: 'button', class: 'auth-btn dng', text: '로그아웃 / Sign out', onclick: function () { document.getElementById('authPanel').classList.remove('open'); logout(); } }));
   };
 
+  /* 활동 기록(보스 전용): 계정 승인·생성·수정·삭제·중지·비밀번호 발급/변경 이력. 서버가 보스에게만 내려준다 */
+  var AUDIT_LABEL = { approveAccount: '가입 승인', rejectAccount: '가입 거절', createAccount: '계정 생성', updateAccount: '이름 수정', deleteAccount: '계정 삭제', setAccountStatus: '사용 상태 변경', resetAccountPassword: '임시 비밀번호 발급', setAccountRole: '직급 변경', passwordChanged: '비밀번호 변경', forcedChangeDone: '임시 비밀번호 변경 완료' };
+  A.renderAudit = async function (sheet) {
+    var holder = h('div', { text: '불러오는 중...' });
+    sheet.appendChild(holder);
+    var r = await api({ action: 'listAudit' });
+    holder.textContent = '';
+    if (!(r && r.ok)) { holder.textContent = (r && r.error) || '불러오기 실패'; return; }
+    var rows = r.rows || [];
+    if (!rows.length) { holder.appendChild(h('div', { class: 'auth-sub', text: '기록이 없습니다.' })); return; }
+    holder.appendChild(h('div', { class: 'auth-sub', text: '최근 ' + rows.length + '건 (최신순)' }));
+    rows.forEach(function (x) {
+      var who = (x.actor || '-') + (x.actorRole ? ' (' + roleLabel(x.actorRole).split(' / ')[0] + ')' : '');
+      var to = x.target ? ' → ' + x.target + (x.targetRole ? ' (' + roleLabel(x.targetRole).split(' / ')[0] + ')' : '') : '';
+      holder.appendChild(h('div', { class: 'auth-audit', text: String(x.ts || '').slice(0, 19).replace('T', ' ') + '  ' + who + '  ' + (AUDIT_LABEL[x.action] || x.action) + to + (x.detail ? '  [' + x.detail + ']' : '') }));
+    });
+  };
+
   A.renderAccounts = async function (sheet, tab) {
     var holder = h('div', { text: '불러오는 중...' });
     sheet.appendChild(holder);
@@ -335,7 +422,7 @@
       var fRole = h('select', { style: 'width:100%;box-sizing:border-box;margin-bottom:6px' }, rankOptions());
       var fMaid = h('input', { type: 'text', placeholder: '메이드 표시명 (2~20자, 비우면 본명)', maxlength: '20', autocomplete: 'off', style: 'width:100%;box-sizing:border-box;margin-bottom:6px;display:none' });
       var fPw = h('input', { type: 'password', placeholder: '임시 비밀번호 (8자 이상, 아이디 미포함)', autocomplete: 'new-password', style: 'width:100%;box-sizing:border-box;margin-bottom:6px' });
-      var fMsg = h('div', { class: 'auth-sub', text: '임시 비밀번호는 본인에게 직접 전달하고, 첫 로그인 후 변경하도록 안내하세요.' });
+      var fMsg = h('div', { class: 'auth-sub', text: '임시 비밀번호는 본인에게 직접 전달하세요. 첫 로그인 때 본인 비밀번호로 바꾸도록 강제되며, 생성 기록이 남습니다.' });
       fRole.addEventListener('change', function () { fMaid.style.display = fRole.value === 'maid' ? '' : 'none'; });
       var fBtn = h('button', { type: 'button', class: 'auth-btn pri', text: '계정 만들기' });
       fBtn.addEventListener('click', async function () {
@@ -348,7 +435,7 @@
         fBtn.disabled = true;
         try {
           var r3 = await api({ action: 'createAccount', id: id, name: nm, role: fRole.value, maidName: fMaid.value.trim(), password: await A.pre(id, pw) });
-          if (r3 && r3.ok) { try { if (window.syncMaids) window.syncMaids(); } catch (e2) { /* 무시 */ } A.renderPanel('all'); } else { fBtn.disabled = false; alert((r3 && r3.error) || '계정 생성 실패'); }
+          if (r3 && r3.ok) { try { if (window.syncMaids) window.syncMaids(); } catch (e2) { /* 무시 */ } attNotice(r3.att); A.renderPanel('all'); } else { fBtn.disabled = false; alert((r3 && r3.error) || '계정 생성 실패'); }
         } catch (e) { fBtn.disabled = false; alert(String(e.message || e)); }
       });
       [fId, fName, fRole, fMaid, fPw, fBtn, fMsg].forEach(function (el) { addForm.appendChild(el); });
@@ -359,15 +446,17 @@
       holder.appendChild(addWrap);
     }
 
+    /* 보스가 아니면 메이드 계정과 승인 대기·거절 신청만 보인다 (서버도 같은 범위만 내려준다) */
+    if (!A.st.isOwner) list = list.filter(function (x) { return x.role === 'maid' || x.status === 'pending' || x.status === 'rejected'; });
     var rows = tab === 'pending' ? list.filter(function (x) { return x.status === 'pending'; }) : list;
     if (!rows.length) holder.appendChild(h('div', { class: 'auth-sub', text: tab === 'pending' ? '승인 대기 중인 신청이 없습니다.' : '계정이 없습니다.' }));
 
     rows.forEach(function (a) {
       var row = h('div', { class: 'auth-row' });
       row.appendChild(h('div', { class: 't', text: a.name + '  (' + a.id + ')' }));
-      row.appendChild(h('div', { class: 's', text: statusLabel(a.status) + (a.role ? ' · ' + roleLabel(a.role) : '') + (a.createdAt ? ' · 신청 ' + a.createdAt.slice(0, 16).replace('T', ' ') : '') + (a.lastLogin ? ' · 최근 ' + a.lastLogin.slice(0, 16).replace('T', ' ') : '') }));
+      row.appendChild(h('div', { class: 's', text: statusLabel(a.status) + (a.role ? ' · ' + roleLabel(a.role) : '') + (a.createdAt ? ' · 신청 ' + a.createdAt.slice(0, 16).replace('T', ' ') : '') + (a.lastLogin ? ' · 최근 ' + a.lastLogin.slice(0, 16).replace('T', ' ') : '') + (a.att ? ' · 출근명단 ' + (a.att === 'linked' ? '연동' : '미연동') : '') }));
       var ctl = h('div', { class: 'ctl' });
-      var done = function (r2, okMsg) { if (r2 && r2.ok) { try { if (window.syncMaids) window.syncMaids(); if (typeof loadRooms === 'function') loadRooms(true); } catch (e) { /* 목록 갱신 실패는 무시 */ } A.renderPanel(tab); } else alert((r2 && r2.error) || '실패'); };
+      var done = function (r2, okMsg) { if (r2 && r2.ok) { try { if (window.syncMaids) window.syncMaids(); if (typeof loadRooms === 'function') loadRooms(true); } catch (e) { /* 목록 갱신 실패는 무시 */ } attNotice(r2.att); A.renderPanel(tab); } else alert((r2 && r2.error) || '실패'); };
 
       if (a.status === 'pending' || a.status === 'rejected') {
         var sel = h('select', {}, rankOptions());
@@ -390,19 +479,22 @@
         } }));
         if (a.status === 'active') {
           ctl.appendChild(h('button', { type: 'button', class: 'auth-btn', text: '임시 비밀번호', onclick: async function () {
-            var t = prompt(a.name + ' 님의 임시 비밀번호 (8자 이상). 본인에게 직접 전달 후 변경하도록 안내하세요.');
+            var t = prompt(a.name + ' 님의 임시 비밀번호 (8자 이상). 본인에게 직접 전달하세요.\n본인은 다음 로그인 때 비밀번호를 바꿔야 하며, 이 작업은 기록됩니다.');
             if (!t) return;
             if (t.length < 8 || t.toLowerCase().indexOf(a.id) !== -1) return alert('8자 이상이며 아이디를 포함하지 않아야 합니다');
             done(await api({ action: 'resetAccountPassword', id: a.id, newPassword: await A.pre(a.id, t) }));
           } }));
-          var rsel = h('select', {}, rankOptions());
-          rsel.value = a.role;
-          if (rsel.value !== a.role) rsel.selectedIndex = 0;
-          ctl.appendChild(rsel);
-          ctl.appendChild(h('button', { type: 'button', class: 'auth-btn', text: '직급 변경', onclick: async function () {
-            if (rsel.value === a.role) return alert('현재 직급과 같습니다');
-            if (confirm(a.name + ' 의 직급을 ' + rsel.options[rsel.selectedIndex].text + '(으)로 변경합니까?\n다른 기기는 로그아웃됩니다.')) done(await api({ action: 'setAccountRole', id: a.id, role: rsel.value }));
-          } }));
+          /* 직급 변경은 보스만. 부점장·점장에게는 보이지 않으며 서버도 거부한다 */
+          if (A.st.isOwner) {
+            var rsel = h('select', {}, rankOptions());
+            rsel.value = a.role;
+            if (rsel.value !== a.role) rsel.selectedIndex = 0;
+            ctl.appendChild(rsel);
+            ctl.appendChild(h('button', { type: 'button', class: 'auth-btn', text: '직급 변경', onclick: async function () {
+              if (rsel.value === a.role) return alert('현재 직급과 같습니다');
+              if (confirm(a.name + ' 의 직급을 ' + rsel.options[rsel.selectedIndex].text + '(으)로 변경합니까?\n다른 기기는 로그아웃됩니다.')) done(await api({ action: 'setAccountRole', id: a.id, role: rsel.value }));
+            } }));
+          }
         }
       }
       /* 이름 수정 · 삭제 — owner 계정과 (보스가 아닐 때) 점장 계정은 제외. 서버도 동일하게 강제한다 */
@@ -430,6 +522,16 @@
             done(await api({ action: 'deleteAccount', id: a.id }));
           } }));
         }
+      }
+      /* 출근 명단 미연동 메이드: 재시도 / 같은 이름의 기존 출근 명단과 연결 (서버가 연동 상태를 내려줄 때만 표시) */
+      if (a.role === 'maid' && a.status === 'active' && a.att === 'unlinked') {
+        ctl.appendChild(h('button', { type: 'button', class: 'auth-btn', text: '출근 명단 연동', onclick: async function () {
+          done(await api({ action: 'attSyncAccount', id: a.id }));
+        } }));
+        ctl.appendChild(h('button', { type: 'button', class: 'auth-btn', text: '기존 출근 명단과 연결', onclick: async function () {
+          if (!confirm(a.name + ' 님을 출근 명단의 같은 이름 메이드와 같은 사람으로 연결합니까?\n본인이 맞는 경우에만 진행하세요. 연결하면 기존 출근 기록이 이어집니다.')) return;
+          done(await api({ action: 'attLinkExisting', id: a.id }));
+        } }));
       }
       row.appendChild(ctl);
       holder.appendChild(row);

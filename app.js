@@ -287,7 +287,7 @@ const el=$(id);if(el)el.style.display=S.role==='admin'?'block':'none';
 });
 const mpwBtn=$('maidPwBtn');if(mpwBtn)mpwBtn.style.display=S.role==='maid'?'block':'none';
 ['statCard0','statCard1','statCard4','statCard5'].forEach(function(id){var el=$(id);if(el)el.style.display=S.role==='admin'?'':'none';});
-applyMaidLang();showLoad(S.role==='maid'?t('loading'):'로딩 중...');
+if(S.role==='maid'&&window.ATT){try{const _att=await ATT.gate();if(_att===null)return;}catch(e){}}applyMaidLang();showLoad(S.role==='maid'?t('loading'):'로딩 중...');
 const _preP=S.role==='admin'?_loadAdminPre():null;
 const _roomsP=loadRooms();
 if(_preP){const _ok=await _preP;if(!_ok)setTimeout(function(){if(S.role==='admin')_loadAdminPre();},5000);}
@@ -1935,8 +1935,14 @@ AUTH.restore();
 AUTH.initLogin();
 
 // ── 업무일지 다운로드 ──
+// 모든 시각은 KST(Asia/Seoul) 기준. 기기 시간대와 무관하게 동작하도록 직접 계산한다.
+function kstYmd(dt){
+const d=(dt instanceof Date)?dt:new Date(dt);
+if(isNaN(d.getTime()))return '';
+return new Date(d.getTime()+9*3600000).toISOString().slice(0,10);
+}
 function openReportModal(){
-const today=new Date().toISOString().slice(0,10);
+const today=kstYmd(new Date());
 $('reportFrom').value=today;
 $('reportTo').value=today;
 $('reportModal').classList.add('open');
@@ -1944,16 +1950,15 @@ $('reportModal').classList.add('open');
 function closeReportModal(){$('reportModal').classList.remove('open');}
 
 function setReportRange(range){
-const d=new Date();
-const fmt=function(dt){return dt.toISOString().slice(0,10);};
+const now=Date.now();
+const DAY=86400000;
 if(range==='today'){
-$('reportFrom').value=fmt(d);$('reportTo').value=fmt(d);
+$('reportFrom').value=kstYmd(new Date(now));$('reportTo').value=kstYmd(new Date(now));
 }else if(range==='yesterday'){
-const y=new Date(d);y.setDate(y.getDate()-1);
-$('reportFrom').value=fmt(y);$('reportTo').value=fmt(y);
+const y=kstYmd(new Date(now-DAY));
+$('reportFrom').value=y;$('reportTo').value=y;
 }else if(range==='7days'){
-const w=new Date(d);w.setDate(w.getDate()-6);
-$('reportFrom').value=fmt(w);$('reportTo').value=fmt(d);
+$('reportFrom').value=kstYmd(new Date(now-6*DAY));$('reportTo').value=kstYmd(new Date(now));
 }
 }
 
@@ -1974,79 +1979,233 @@ const m=Math.floor((diff%3600000)/60000);
 return h>0?h+'시간 '+m+'분':m+'분';
 }
 
-async function downloadReport(){
-const from=$('reportFrom').value;
-const to=$('reportTo').value;
-if(!from||!to){toast('날짜를 선택하세요');return;}
-showLoad('업무일지 생성 중...');
-try{
-const r=await api({action:'getReportData',dateFrom:from,dateTo:to});
-if(!r.ok){hideLoad();toast('데이터 로드 실패');return;}
-const KR_S={occupied:'재실',uncleaned:'미정비',cleaning:'정비중',
-inspection:'인스펙션필요',vacant:'공실완료',broken:'고장',cleaned:'인스펙션필요',office:'사무실'};
+// ── 업무일지 보조: 시각 해석 / 소요시간 / 정비 건 조립 ──
+function rptFromMs(ms){
+const k=new Date(ms+9*3600000).toISOString();
+return {ms:ms,ymd:k.slice(0,10),hm:k.slice(11,16)};
+}
+// 서버가 주는 timestamp를 {ms, ymd, hm}(KST)로 해석. 해석 불가면 null.
+// 'YYYY-MM-DD HH:mm(:ss)' 형태(시간대 표기 없음)는 KST로 간주한다.
+function rptParseTs(ts){
+if(ts===null||ts===undefined||ts==='')return null;
+if(typeof ts==='number'){return isFinite(ts)?rptFromMs(ts):null;}
+if(ts instanceof Date){return isNaN(ts.getTime())?null:rptFromMs(ts.getTime());}
+const s=String(ts).trim();
+const m=s.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?$/);
+if(m){
+const ms=Date.parse(m[1]+'-'+m[2]+'-'+m[3]+'T'+m[4]+':'+m[5]+':'+(m[6]||'00')+'+09:00');
+if(isNaN(ms))return null;
+return {ms:ms,ymd:m[1]+'-'+m[2]+'-'+m[3],hm:m[4]+':'+m[5]};
+}
+const ms2=Date.parse(s);
+return isNaN(ms2)?null:rptFromMs(ms2);
+}
+function rptDur(ms){
+if(typeof ms!=='number'||!isFinite(ms)||ms<0)return '';
+const total=Math.round(ms/60000);
+const h=Math.floor(total/60);
+const m=total%60;
+return h>0?h+'시간 '+m+'분':m+'분';
+}
+// 같은 날이면 'HH:mm', 다른 날이면 'MM-DD HH:mm'
+function rptHm(t,baseYmd){
+if(!t)return '';
+return t.ymd===baseYmd?t.hm:t.ymd.slice(5)+' '+t.hm;
+}
+function rptNormSt(s){
+s=String(s===null||s===undefined?'':s).trim();
+return s==='cleaned'?'inspection':s;
+}
 
-const tally={};
-r.rooms.forEach(function(rm){
-if(!rm.maidName)return;
-rm.maidName.split(',').map(function(n){return n.trim();}).filter(Boolean).forEach(function(name){
-if(!tally[name])tally[name]={done:0,wip:0,total:0};
-const st=rm.status==='cleaned'?'inspection':rm.status;
-if(['uncleaned','cleaning','inspection','vacant'].includes(st)){
-tally[name].total++;
-if(st==='inspection'||st==='vacant')tally[name].done++;
-if(st==='cleaning')tally[name].wip++;
+// RoomHistory(상태 변경 이력)에서 "정비 1건"(정비 시작 → 정비 완료 → 검수 완료)을 조립한다.
+// 규칙(가정 — 업무일지 하단 주석과 HANDOFF에 명시):
+//  · 메이드 = 정비 시작(→cleaning)을 누른 사람(역할 maid). 시작 기록이 없으면 정비 완료(→inspection)를 누른 메이드.
+//  · 정비 완료 = →inspection 이력. 소요시간 = 정비 시작 ~ 정비 완료(검수 대기 시간 제외).
+//  · 검수 완료 = →vacant 이력. 검수자 = 그 이력의 변경자.
+//  · 검수 후 다시 →cleaning이면 같은 건의 재정비(시작은 최초 시각 유지, 재정비 횟수 표시).
+//  · 건은 공실완료(vacant)로 닫힌다. 그 전에 다른 상태로 바뀌면 '중단'으로 닫는다.
+function buildCleaningSessions(history,rooms){
+const typeMap={};
+(Array.isArray(rooms)?rooms:[]).forEach(function(rm){
+if(!rm||rm.roomNo===undefined||rm.roomNo===null)return;
+typeMap[String(rm.roomNo).trim()]=rm.typeName||rm.typeCode||'';
+});
+const ev=[];
+(Array.isArray(history)?history:[]).forEach(function(h,i){
+if(!h)return;
+const t=rptParseTs(h.timestamp);
+if(!t)return;
+const no=String(h.roomNo===undefined||h.roomNo===null?'':h.roomNo).trim();
+if(!no)return;
+ev.push({i:i,t:t,no:no,from:rptNormSt(h.fromStatus),to:rptNormSt(h.toStatus),
+by:String(h.changedBy||'').trim(),isMaid:h.role==='maid'});
+});
+ev.sort(function(a,b){return a.t.ms-b.t.ms||a.i-b.i;});
+
+const open={};
+const out=[];
+function mk(e){
+return {roomNo:e.no,type:typeMap[e.no]||'',maid:'',start:null,done:null,inspDone:null,
+inspector:'',redo:0,flags:[]};
+}
+function close(s){
+if(!s.maid)s.maid='';
+out.push(s);
+}
+ev.forEach(function(e){
+let s=open[e.no];
+if(e.to==='cleaning'){
+if(!s){s=mk(e);open[e.no]=s;s.start=e.t;}
+else if(s.done){s.redo++;s.done=null;}
+else if(!s.start){s.start=e.t;}
+if(!s.maid&&e.isMaid&&e.by)s.maid=e.by;
+}else if(e.to==='inspection'){
+if(!s){s=mk(e);open[e.no]=s;s.flags.push('정비 시작 기록 없음');}
+s.done=e.t;
+if(!s.maid&&e.isMaid&&e.by)s.maid=e.by;
+}else if(e.to==='vacant'){
+if(s){
+s.inspDone=e.t;s.inspector=e.by;
+delete open[e.no];close(s);
+}else if(e.from==='inspection'){
+const lone=mk(e);
+lone.inspDone=e.t;lone.inspector=e.by;
+lone.flags.push('정비는 조회 기간 이전');
+close(lone);
+}
+}else{
+if(s){
+s.flags.push('중단(→'+(e.to||'?')+')');
+delete open[e.no];close(s);
+}
 }
 });
+Object.keys(open).forEach(function(no){
+const s=open[no];
+s.flags.push(s.done?'검수 대기':'정비 중');
+close(s);
 });
+out.forEach(function(s){
+s.ymd=(s.start||s.done||s.inspDone).ymd;
+if(s.redo>0)s.flags.push('재정비 '+s.redo+'회');
+});
+out.sort(function(a,b){
+const ka=(a.start||a.done||a.inspDone).ms,kb=(b.start||b.done||b.inspDone).ms;
+return ka-kb;
+});
+return out;
+}
 
+// 업무일지 3개 표(+기존 현황/상세/이력)를 배열 형태로 조립. 화면·네트워크 의존 없음(검증 가능).
+function buildReportSheets(r,from,to,nowText){
+const rooms=Array.isArray(r&&r.rooms)?r.rooms:[];
+const notes=Array.isArray(r&&r.notes)?r.notes:[];
+const history=Array.isArray(r&&r.history)?r.history:[];
+const KR_S={occupied:'재실',uncleaned:'미정비',cleaning:'정비중',
+inspection:'인스펙션필요',vacant:'공실완료',broken:'고장',cleaned:'인스펙션필요',office:'사무실'};
+const NO_MAID='미확인';
+
+const sessions=buildCleaningSessions(history,rooms);
+
+// 표 2) 메이드별 요약
+const byMaid={};
+sessions.forEach(function(s){
+if(!s.start&&!s.done)return;
+const name=s.maid||NO_MAID;
+if(!byMaid[name])byMaid[name]={n:0,done:0,insp:0,durSum:0,durN:0};
+const g=byMaid[name];
+g.n++;
+if(s.done)g.done++;
+if(s.inspDone)g.insp++;
+if(s.start&&s.done&&s.done.ms>=s.start.ms){g.durSum+=s.done.ms-s.start.ms;g.durN++;}
+});
+const maidKeys=Object.keys(byMaid).sort(function(a,b){
+if(a===NO_MAID)return 1;
+if(b===NO_MAID)return -1;
+return byMaid[b].n-byMaid[a].n||(a<b?-1:a>b?1:0);
+});
+const maidRows=maidKeys.map(function(k){
+const g=byMaid[k];
+return [k,g.n,g.done,g.insp,g.durN?rptDur(g.durSum/g.durN):''];
+});
+let tn=0,td=0,ti=0,ts=0,tc=0;
+maidKeys.forEach(function(k){const g=byMaid[k];tn+=g.n;td+=g.done;ti+=g.insp;ts+=g.durSum;tc+=g.durN;});
+
+// 객실 현황(현재 시점 스냅샷)
 const sc={occupied:0,uncleaned:0,cleaning:0,inspection:0,vacant:0,broken:0};
-r.rooms.forEach(function(rm){
-const st=rm.status==='cleaned'?'inspection':rm.status;
+rooms.forEach(function(rm){
+const st=rptNormSt(rm.status);
 if(sc[st]!==undefined)sc[st]++;
 });
 
 const summary=[
 ['호텔 어라운드 속초 — 업무일지'],
 ['기간',from+' ~ '+to],
-['생성일시',new Date().toLocaleString('ko-KR')],
+['생성일시',nowText],
 [],
-['[ 객실 현황 ]'],
+['[ 객실 현황 ] (생성 시점 기준)'],
 ['재실','미정비','정비중','인스펙션필요','공실완료','고장'],
 [sc.occupied,sc.uncleaned,sc.cleaning,sc.inspection,sc.vacant,sc.broken],
 [],
-['[ 메이드별 현황 ]'],
-['이름','완료','정비중','담당합계','완료율']
-].concat(Object.entries(tally).map(function(e){
-const name=e[0],d=e[1];
-return [name,d.done,d.wip,d.total,d.total?Math.round(d.done/d.total*100)+'%':'0%'];
-}));
+['[ 메이드별 요약 ] (기간 내 정비 이력 기준)'],
+['메이드','정비 건수','정비 완료','검수 완료','평균 소요시간']
+];
+if(maidRows.length){
+maidRows.forEach(function(row){summary.push(row);});
+summary.push(['합계',tn,td,ti,tc?rptDur(ts/tc):'']);
+}else{
+summary.push(['해당 기간 정비 기록이 없습니다.','','','','']);
+}
+summary.push([]);
+summary.push(['※ 정비 건수 = 정비 시작 기록이 있는 건. 소요시간 = 정비 시작 ~ 정비 완료(검수 대기 시간 제외).']);
+summary.push(['※ 정비 시작을 관리자가 눌렀거나 기록이 없으면 메이드가 "미확인"으로 표시됩니다. 상세는 [정비내역] 시트.']);
 
-const noteMap={};
-r.notes.forEach(function(n){
-if(!noteMap[n.roomNo])noteMap[n.roomNo]=[];
-const t=n.timestamp?new Date(n.timestamp).toLocaleString('ko-KR',{hour:'2-digit',minute:'2-digit'}):'';
-noteMap[n.roomNo].push('['+t+'] '+n.sender+': '+n.note);
+// 표 1) 정비 내역
+const logHead=['날짜','메이드','객실','객실 타입','정비 시작','정비 완료','소요시간','검수자','검수 완료','비고'];
+const log=[logHead];
+sessions.forEach(function(s){
+log.push([
+s.ymd,
+s.maid||NO_MAID,
+s.roomNo,
+s.type,
+rptHm(s.start,s.ymd),
+rptHm(s.done,s.ymd),
+(s.start&&s.done)?rptDur(s.done.ms-s.start.ms):'',
+s.inspector,
+rptHm(s.inspDone,s.ymd),
+s.flags.join(' / ')
+]);
 });
+if(!sessions.length)log.push(['해당 기간 정비 기록이 없습니다.','','','','','','','','','']);
 
+// 객실 상세(현재 상태 + 메모) — 기존 구성 유지
+const noteMap={};
+notes.forEach(function(n){
+if(!n)return;
+const no=String(n.roomNo);
+if(!noteMap[no])noteMap[no]=[];
+const t=n.timestamp?new Date(n.timestamp).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit'}):'';
+noteMap[no].push('['+t+'] '+n.sender+': '+n.note);
+});
 const stepMap={};
-r.history.forEach(function(h){
+history.forEach(function(h){
+if(!h)return;
 const no=String(h.roomNo);
 if(!stepMap[no])stepMap[no]={};
-const st=h.toStatus==='cleaned'?'inspection':h.toStatus;
+const st=rptNormSt(h.toStatus);
 if(['cleaning','inspection','vacant'].includes(st)){
 stepMap[no][st]=h.timestamp;
 }
 });
-
 const detail=[
 ['객실번호','타입','담당 메이드','현재상태','정비시작','인스펙션요청','공실완료','소요시간','메모']
-].concat(r.rooms.map(function(rm){
+].concat(rooms.map(function(rm){
 const no=String(rm.roomNo);
 const steps=stepMap[no]||{};
 const tCleaning=steps['cleaning']||'';
 const tInspection=steps['inspection']||'';
 const tVacant=steps['vacant']||'';
-const duration=calcDuration(tCleaning,tVacant);
 return [
 rm.roomNo,
 rm.typeCode,
@@ -2055,62 +2214,52 @@ KR_S[rm.status]||rm.status,
 fmtTimeOnly(tCleaning),
 fmtTimeOnly(tInspection),
 fmtTimeOnly(tVacant),
-duration,
+calcDuration(tCleaning,tVacant),
 (noteMap[no]||[]).join('\n')
 ];
 }));
 
+// 변경 이력 — 기존 구성 유지(역할 표기만 maid 여부로 판정)
 const hist=[
 ['변경시각','객실번호','이전상태','변경후상태','변경자','역할']
-].concat(r.history.map(function(h){
+].concat(history.filter(Boolean).map(function(h){
 return [
 fmtTime(h.timestamp),
 h.roomNo,
 KR_S[h.fromStatus]||h.fromStatus||'',
 KR_S[h.toStatus]||h.toStatus||'',
 h.changedBy||'',
-h.role==='admin'?'관리자':'메이드'
+h.role==='maid'?'메이드':'관리자'
 ];
 }));
 
-// ── 메이드별 상세 시트 ──
-const maidNames=Object.keys(tally);
-const maidDetail=[
-['메이드','객실번호','타입','현재상태','정비시작','인스펙션요청','공실완료','소요시간','메모']
-];
-maidNames.forEach(function(maidName){
-r.rooms.forEach(function(rm){
-if(!rm.maidName)return;
-const assigned=rm.maidName.split(',').map(function(n){return n.trim();});
-if(!assigned.map(function(n){return n.toLowerCase();}).includes(maidName.toLowerCase()))return;
-const no=String(rm.roomNo);
-const steps=stepMap[no]||{};
-const tC=steps['cleaning']||'';
-const tI=steps['inspection']||'';
-const tV=steps['vacant']||'';
-maidDetail.push([
-maidName,rm.roomNo,rm.typeCode,KR_S[rm.status]||rm.status,
-fmtTimeOnly(tC),fmtTimeOnly(tI),fmtTimeOnly(tV),calcDuration(tC,tV),
-(noteMap[no]||[]).join('\n')
-]);
-});
-const d=tally[maidName];
-const pct=d.total?Math.round(d.done/d.total*100):0;
-maidDetail.push([maidName+' 소계','','','',
-'담당:'+d.total+'객실','완료:'+d.done+'객실','진행중:'+d.wip+'객실','완료율:'+pct+'%','']);
-maidDetail.push([]);
-});
+return {summary:summary,log:log,logCount:sessions.length,detail:detail,hist:hist};
+}
+
+async function downloadReport(){
+const from=$('reportFrom').value;
+const to=$('reportTo').value;
+if(!from||!to){toast('날짜를 선택하세요');return;}
+if(from>to){toast('시작일이 종료일보다 늦습니다');return;}
+showLoad('업무일지 생성 중...');
+try{
+const r=await api({action:'getReportData',dateFrom:from,dateTo:to});
+if(!r||!r.ok){hideLoad();toast('데이터 로드 실패');return;}
+const nowText=new Date().toLocaleString('ko-KR',{timeZone:'Asia/Seoul'});
+const sh=buildReportSheets(r,from,to,nowText);
+
 const wb=XLSX.utils.book_new();
-const ws1=XLSX.utils.aoa_to_sheet(summary);
-ws1['!cols']=[{wch:20},{wch:12},{wch:12},{wch:14},{wch:14},{wch:10}];
+const ws1=XLSX.utils.aoa_to_sheet(sh.summary);
+ws1['!cols']=[{wch:26},{wch:12},{wch:12},{wch:14},{wch:16},{wch:10}];
 XLSX.utils.book_append_sheet(wb,ws1,'업무요약');
-const ws2=XLSX.utils.aoa_to_sheet(detail);
+const wsLog=XLSX.utils.aoa_to_sheet(sh.log);
+wsLog['!cols']=[{wch:12},{wch:12},{wch:8},{wch:14},{wch:12},{wch:12},{wch:12},{wch:12},{wch:12},{wch:34}];
+if(sh.logCount>0)wsLog['!autofilter']={ref:'A1:J'+(sh.logCount+1)};
+XLSX.utils.book_append_sheet(wb,wsLog,'정비내역');
+const ws2=XLSX.utils.aoa_to_sheet(sh.detail);
 ws2['!cols']=[{wch:10},{wch:12},{wch:16},{wch:14},{wch:12},{wch:12},{wch:12},{wch:12},{wch:40}];
 XLSX.utils.book_append_sheet(wb,ws2,'객실상세');
-const ws4=XLSX.utils.aoa_to_sheet(maidDetail);
-ws4['!cols']=[{wch:14},{wch:10},{wch:12},{wch:14},{wch:12},{wch:12},{wch:12},{wch:12},{wch:36}];
-XLSX.utils.book_append_sheet(wb,ws4,'메이드별');
-const ws3=XLSX.utils.aoa_to_sheet(hist);
+const ws3=XLSX.utils.aoa_to_sheet(sh.hist);
 ws3['!cols']=[{wch:18},{wch:10},{wch:14},{wch:14},{wch:12},{wch:8}];
 XLSX.utils.book_append_sheet(wb,ws3,'변경이력');
 const fname='HK_업무일지_'+from+(from!==to?'~'+to:'')+'.xlsx';
